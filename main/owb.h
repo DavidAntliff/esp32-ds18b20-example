@@ -91,7 +91,7 @@ uint8_t owb_read_byte(const OneWireBus * bus);
   * @param[in] len Number of bytes to write.
   * @return Pointer to write buffer.
   */
-uint8_t * owb_write_bytes(const OneWireBus * bus, const uint8_t * buffer, unsigned int len);
+const uint8_t * owb_write_bytes(const OneWireBus * bus, const uint8_t * buffer, unsigned int len);
 
 /**
  * @brief Write a ROM code to the 1-Wire bus ensuring LSB is sent first.
@@ -113,4 +113,4 @@ void owb_write_rom_code(const OneWireBus * bus, uint64_t rom_code);
 }
 #endif
 
-#endif  // DS18B20_H
+#endif  // ONE_WIRE_BUS_H

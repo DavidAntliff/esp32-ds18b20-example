@@ -63,6 +63,7 @@ DS18B20_Info * ds18b20_malloc(void)
 	if (ds18b20_info != NULL)
 	{
 		memset(ds18b20_info, 0, sizeof(*ds18b20_info));
+		ESP_LOGD(TAG, "malloc %p", ds18b20_info);
 	}
 	else
 	{
@@ -76,7 +77,8 @@ void ds18b20_free(DS18B20_Info ** ds18b20_info)
 {
 	if (ds18b20_info != NULL && (*ds18b20_info != NULL))
 	{
-		free(ds18b20_info);
+		ESP_LOGD(TAG, "free %p", *ds18b20_info);
+		free(*ds18b20_info);
 		*ds18b20_info = NULL;
 	}
 }

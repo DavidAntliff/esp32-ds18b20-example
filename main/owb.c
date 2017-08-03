@@ -8,6 +8,7 @@
 #include "driver/gpio.h"
 
 #include "owb.h"
+#include "owb_static.h"
 
 #define TAG "owb"
 
@@ -31,13 +32,13 @@ static const struct _OneWireBus_Timing _StandardTiming = {
 	410 * 4,  // J
 };
 
-struct _OneWireBus
-{
-	bool init;
-	int gpio;
-	const struct _OneWireBus_Timing * timing;
-	bool use_crc;
-};
+//struct _OneWireBus
+//{
+//	bool init;
+//	int gpio;
+//	const struct _OneWireBus_Timing * timing;
+//	bool use_crc;
+//};
 
 static void _tick_delay(int ticks)
 {
@@ -204,7 +205,7 @@ static uint8_t * _read_block(const OneWireBus * bus, uint8_t * buffer, unsigned 
  * @param[in] len Number of bytes to write.
  * @return Pointer to write buffer.
  */
-static uint8_t * _write_block(const OneWireBus * bus, const uint8_t * buffer, unsigned int len)
+static const uint8_t * _write_block(const OneWireBus * bus, const uint8_t * buffer, unsigned int len)
 {
 	for (int i = 0; i < len; ++i)
 	{
@@ -253,6 +254,7 @@ OneWireBus * owb_malloc()
 	if (bus != NULL)
 	{
 		memset(bus, 0, sizeof(*bus));
+		ESP_LOGD(TAG, "malloc %p", bus);
 	}
 	else
 	{
@@ -265,7 +267,8 @@ void owb_free(OneWireBus ** bus)
 {
 	if (bus != NULL && (*bus != NULL))
 	{
-		free(bus);
+		ESP_LOGD(TAG, "free %p", *bus);
+		free(*bus);
 		*bus = NULL;
 	}
 }
@@ -367,7 +370,7 @@ uint8_t * owb_read_bytes(const OneWireBus * bus, uint8_t * buffer, unsigned int 
 	return _read_block(bus, buffer, len);
 }
 
-uint8_t * owb_write_bytes(const OneWireBus * bus, const uint8_t * buffer, unsigned int len)
+const uint8_t * owb_write_bytes(const OneWireBus * bus, const uint8_t * buffer, unsigned int len)
 {
 	return _write_block(bus, buffer, len);
 }
