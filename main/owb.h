@@ -2,6 +2,7 @@
 #define ONE_WIRE_BUS_H
 
 #include <stdint.h>
+#include <stdbool.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -54,6 +55,9 @@ void owb_use_crc(OneWireBus * bus, bool use_crc);
  */
 uint64_t owb_read_rom(const OneWireBus * bus);
 
+// TODO
+bool owb_verify_rom(const OneWireBus * bus, uint64_t rom_code);
+
 /**
  * @brief Reset the 1-Wire bus.
  * @param[in] bus Pointer to initialised bus instance.
@@ -100,13 +104,28 @@ const uint8_t * owb_write_bytes(const OneWireBus * bus, const uint8_t * buffer, 
  */
 void owb_write_rom_code(const OneWireBus * bus, uint64_t rom_code);
 
- /**
+/**
   * @brief 1-Wire 8-bit CRC lookup.
   * @param[in] crc Starting CRC value. Pass in prior CRC to accumulate.
   * @param[in] data Byte to feed into CRC.
   * @return Resultant CRC value.
   */
- uint8_t owb_crc8(uint8_t crc, uint8_t data);
+uint8_t owb_crc8(uint8_t crc, uint8_t data);
+
+
+// Search API
+struct OneWireBus_SearchState
+{
+ uint8_t rom_code[8];
+ int last_discrepancy;
+ int last_family_discrepancy;
+ int last_device_flag;
+};
+typedef struct OneWireBus_SearchState OneWireBus_SearchState;
+
+bool owb_search_first(const OneWireBus * bus, OneWireBus_SearchState * state);
+bool owb_search_next(const OneWireBus * bus, OneWireBus_SearchState * state);
+
 
 
 #ifdef __cplusplus

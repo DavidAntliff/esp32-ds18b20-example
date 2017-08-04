@@ -13,10 +13,10 @@ extern "C" {
 
 struct _OneWireBus
 {
-	bool init;
-	int gpio;
-	const struct _OneWireBus_Timing * timing;
-	bool use_crc;
+    bool init;
+    int gpio;
+    const struct _OneWireBus_Timing * timing;
+    bool use_crc;
 };
 
 typedef struct _OneWireBus OneWireBus_Static;

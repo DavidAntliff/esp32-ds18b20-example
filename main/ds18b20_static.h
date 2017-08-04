@@ -14,10 +14,10 @@ extern "C" {
 
 struct _DS18B20_Info
 {
-	bool init;
-	bool use_crc;
-	OneWireBus * bus;
-	uint64_t rom_code;
+    bool init;
+    bool use_crc;
+    OneWireBus * bus;
+    uint64_t rom_code;
 };
 
 typedef struct _DS18B20_Info DS18B20_Info_Static;
