@@ -1,3 +1,27 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 David Antliff
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 #include <inttypes.h>
 
 #include "freertos/FreeRTOS.h"
@@ -23,7 +47,7 @@
 
 void app_main()
 {
-    esp_log_level_set("*", ESP_LOG_INFO);        // set all components to INFO level
+    esp_log_level_set("*", ESP_LOG_INFO);
 
     // Create a 1-Wire bus
 #ifdef USE_STATIC
@@ -44,16 +68,19 @@ void app_main()
     bool found = owb_search_first(owb, &search_state);
     while (found)
     {
-        printf("  %d : ", num_devices);
-        for (int i = 7; i >= 0; i--)
-        {
-            printf("%02x", ((uint8_t *)(&search_state.rom_code))[i]);
-        }
-        printf("\n");
+        char rom_code_s[17];
+        owb_string_from_rom_code(search_state.rom_code, rom_code_s, sizeof(rom_code_s));
+        printf("  %d : %s\n", num_devices, rom_code_s);
         device_rom_codes[num_devices] = search_state.rom_code;
         ++num_devices;
         found = owb_search_next(owb, &search_state);
     }
+
+    // known ROM codes (LSB first):
+    OneWireBus_ROMCode known_device = { { {0x28}, {0xee, 0xcc, 0x87, 0x2e, 0x16, 0x01}, {0x00} } };
+    char rom_code_s[17];
+    owb_string_from_rom_code(known_device, rom_code_s, sizeof(rom_code_s));
+    printf("Device %s is %s\n", rom_code_s, owb_verify_rom(owb, known_device) ? "present" : "not present");
 
     //uint64_t rom_code = 0x0001162e87ccee28;  // pink
     //uint64_t rom_code = 0xf402162c6149ee28;  // green

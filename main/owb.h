@@ -1,3 +1,27 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 David Antliff
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 #ifndef ONE_WIRE_BUS_H
 #define ONE_WIRE_BUS_H
 
@@ -18,6 +42,11 @@ extern "C" {
 
 typedef struct _OneWireBus OneWireBus;
 
+/**
+ * @brief Represents a 1-Wire ROM Code. This is a sequence of eight bytes, where
+ *        the first byte is the family number, then the following 6 bytes form the
+ *        serial number. The final byte is the CRC8 check byte.
+ */
 typedef union
 {
     struct fields
@@ -66,7 +95,12 @@ void owb_use_crc(OneWireBus * bus, bool use_crc);
  */
 OneWireBus_ROMCode owb_read_rom(const OneWireBus * bus);
 
-// TODO
+/**
+ * @brief Verify the device specified by ROM code is present.
+ * @param[in] bus Pointer to initialised bus instance.
+ * @param[in] rom_code ROM code to verify.
+ * @return true if device is present, false if not present.
+ */
 bool owb_verify_rom(const OneWireBus * bus, OneWireBus_ROMCode rom_code);
 
 /**
@@ -120,30 +154,63 @@ void owb_write_rom_code(const OneWireBus * bus, OneWireBus_ROMCode rom_code);
  * @param[in] crc Starting CRC value. Pass in prior CRC to accumulate.
  * @param[in] data Byte to feed into CRC.
  * @return Resultant CRC value.
+ *         Should be zero if last byte was the CRC byte and the CRC matches.
  */
 uint8_t owb_crc8_byte(uint8_t crc, uint8_t data);
 
-
-// TODO
+/**
+ * @brief 1-Wire 8-bit CRC lookup with accumulation over a block of bytes.
+ * @param[in] crc Starting CRC value. Pass in prior CRC to accumulate.
+ * @param[in] data Array of bytes to feed into CRC.
+ * @param[in] len Length of data array in bytes.
+ * @return Resultant CRC value.
+ *         Should be zero if last byte was the CRC byte and the CRC matches.
+ */
 uint8_t owb_crc8_bytes(uint8_t crc, const uint8_t * data, size_t len);
 
 
 // Search API
-struct OneWireBus_SearchState
+
+/**
+ * @brief Represents the state of a device search on the 1-Wire bus. Pass a pointer to
+ *        this structure to `owb_search_first` and `owb_search_next` to iterate through
+ *        detected devices on the bus.
+ */
+typedef struct
 {
     OneWireBus_ROMCode rom_code;
     int last_discrepancy;
     int last_family_discrepancy;
     int last_device_flag;
-};
-typedef struct OneWireBus_SearchState OneWireBus_SearchState;
+} OneWireBus_SearchState;
 
+/**
+ * @brief Locates the first device on the 1-Wire bus, if present.
+ * @param[in] bus Pointer to initialised bus instance.
+ * @param[in,out] state Pointer to an existing search state structure.
+ * @return True if a device is found, false if no devices are found.
+ *         If a device is found, the ROM Code can be obtained from the state.
+ */
 bool owb_search_first(const OneWireBus * bus, OneWireBus_SearchState * state);
+
+/**
+ * @brief Locates the next device on the 1-Wire bus, if present, starting from
+ *        the provided state. Further calls will yield additional devices, if present.
+ * @param[in] bus Pointer to initialised bus instance.
+ * @param[in,out] state Pointer to an existing search state structure.
+ * @return True if a device is found, false if no devices are found.
+ *         If a device is found, the ROM Code can be obtained from the state.
+ */
 bool owb_search_next(const OneWireBus * bus, OneWireBus_SearchState * state);
 
-// TODO: maybe not useful?
-uint64_t uint64_from_rom_code(OneWireBus_ROMCode rom_code);
-OneWireBus_ROMCode rom_code_from_uint64(uint64_t rom_code);
+/**
+ * @brief Create a string representation of a ROM code.
+ * @param[in] rom_code The ROM code to convert to string representation.
+ * @param[out] buffer The destination for the string representation. It will be null terminated.
+ * @param[in] len The length of the buffer in bytes. 64-bit ROM codes require 16 characters
+ *                to represent as a string, plus a null terminator, for 17 bytes.
+ */
+char * owb_string_from_rom_code(OneWireBus_ROMCode rom_code, char * buffer, size_t len);
 
 
 #ifdef __cplusplus

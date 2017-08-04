@@ -1,3 +1,27 @@
+/*
+ * MIT License
+ *
+ * Copyright (c) 2017 David Antliff
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining a copy
+ * of this software and associated documentation files (the "Software"), to deal
+ * in the Software without restriction, including without limitation the rights
+ * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ * copies of the Software, and to permit persons to whom the Software is
+ * furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included in all
+ * copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ * AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ * OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ * SOFTWARE.
+ */
+
 #include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
@@ -421,12 +445,6 @@ void owb_use_crc(OneWireBus * bus, bool use_crc)
     }
 }
 
-int owb_rom_search(OneWireBus * bus)
-{
-    // TODO
-    return 0;
-}
-
 OneWireBus_ROMCode owb_read_rom(const OneWireBus * bus)
 {
     OneWireBus_ROMCode rom_code = {0};
@@ -445,7 +463,9 @@ OneWireBus_ROMCode owb_read_rom(const OneWireBus * bus)
                     memset(rom_code.bytes, 0, sizeof(rom_code));
                 }
             }
-            ESP_LOGD(TAG, "rom_code %08" PRIx64, rom_code);
+            char rom_code_s[17];
+            owb_string_from_rom_code(rom_code, rom_code_s, sizeof(rom_code_s));
+            ESP_LOGD(TAG, "rom_code %s", rom_code_s);
         }
         else
         {
@@ -453,6 +473,30 @@ OneWireBus_ROMCode owb_read_rom(const OneWireBus * bus)
         }
     }
     return rom_code;
+}
+
+bool owb_verify_rom(const OneWireBus * bus, OneWireBus_ROMCode rom_code)
+{
+    bool result = false;
+    if (_is_init(bus))
+    {
+        OneWireBus_SearchState state = {
+            .last_discrepancy = 64,
+            .last_device_flag = false,
+        };
+
+        if (_search(bus, &state))
+        {
+            result = true;
+            for (int i = 0; i < sizeof(state.rom_code.bytes) && result; ++i)
+            {
+                result = rom_code.bytes[i] == state.rom_code.bytes[i];
+                ESP_LOGD(TAG, "%02x %02x", rom_code.bytes[i], state.rom_code.bytes[i]);
+            }
+            ESP_LOGD(TAG, "rom code %sfound", result ? "" : "not ");
+        }
+    }
+    return result;
 }
 
 bool owb_reset(const OneWireBus * bus)
@@ -525,4 +569,14 @@ bool owb_search_next(const OneWireBus * bus, OneWireBus_SearchState * state)
         ESP_LOGE(TAG, "state is NULL");
     }
     return result;
+}
+
+char * owb_string_from_rom_code(OneWireBus_ROMCode rom_code, char * buffer, size_t len)
+{
+    for (int i = sizeof(rom_code.bytes) - 1; i >= 0; i--)
+    {
+        sprintf(buffer, "%02x", rom_code.bytes[i]);
+        buffer += 2;
+    }
+    return buffer;
 }
