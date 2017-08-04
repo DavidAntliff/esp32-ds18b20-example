@@ -10,7 +10,7 @@
 #include "owb.h"
 #include "owb_static.h"
 
-#define TAG "owb"
+static const char * TAG = "owb";
 
 struct _OneWireBus_Timing
 {
@@ -235,6 +235,17 @@ static uint8_t _calc_crc(uint8_t crc, uint8_t data)
     return table[crc ^ data];
 }
 
+static uint8_t _calc_crc_block(uint8_t crc, const uint8_t * buffer, size_t len)
+{
+    uint8_t crc8 = 0;
+    do
+    {
+        crc8 = _calc_crc(crc8, *buffer++);
+    }
+    while (len-- > 0);
+    return crc8;
+}
+
 static bool _search(const OneWireBus * bus, OneWireBus_SearchState * state)
 {
     // Based on https://www.maximintegrated.com/en/app-notes/index.mvp/id/187
@@ -288,7 +299,7 @@ static bool _search(const OneWireBus * bus, OneWireBus_SearchState * state)
                         // if this discrepancy if before the Last Discrepancy
                         // on a previous next then pick the same as last time
                         if (id_bit_number < state->last_discrepancy)
-                            search_direction = ((state->rom_code[rom_byte_number] & rom_byte_mask) > 0);
+                            search_direction = ((state->rom_code.bytes[rom_byte_number] & rom_byte_mask) > 0);
                         else
                             // if equal to last pick 1, if not then pick 0
                             search_direction = (id_bit_number == state->last_discrepancy);
@@ -307,9 +318,9 @@ static bool _search(const OneWireBus * bus, OneWireBus_SearchState * state)
                     // set or clear the bit in the ROM byte rom_byte_number
                     // with mask rom_byte_mask
                     if (search_direction == 1)
-                        state->rom_code[rom_byte_number] |= rom_byte_mask;
+                        state->rom_code.bytes[rom_byte_number] |= rom_byte_mask;
                     else
-                        state->rom_code[rom_byte_number] &= ~rom_byte_mask;
+                        state->rom_code.bytes[rom_byte_number] &= ~rom_byte_mask;
 
                     // serial number search direction write bit
                     _write_bit(bus, search_direction);
@@ -322,7 +333,7 @@ static bool _search(const OneWireBus * bus, OneWireBus_SearchState * state)
                     // if the mask is 0 then go to new SerialNum byte rom_byte_number and reset mask
                     if (rom_byte_mask == 0)
                     {
-                        crc8 = _calc_crc(crc8, state->rom_code[rom_byte_number]);  // accumulate the CRC
+                        crc8 = _calc_crc(crc8, state->rom_code.bytes[rom_byte_number]);  // accumulate the CRC
                         rom_byte_number++;
                         rom_byte_mask = 1;
                     }
@@ -345,7 +356,7 @@ static bool _search(const OneWireBus * bus, OneWireBus_SearchState * state)
         }
 
         // if no device found then reset counters so next 'search' will be like a first
-        if (!search_result || !state->rom_code[0])
+        if (!search_result || !state->rom_code.bytes[0])
         {
             state->last_discrepancy = 0;
             state->last_device_flag = false;
@@ -416,42 +427,25 @@ int owb_rom_search(OneWireBus * bus)
     return 0;
 }
 
-uint64_t owb_read_rom(const OneWireBus * bus)
+OneWireBus_ROMCode owb_read_rom(const OneWireBus * bus)
 {
-    uint64_t rom_code = 0;
+    OneWireBus_ROMCode rom_code = {0};
     if (_is_init(bus))
     {
         if (_reset(bus))
         {
-            uint8_t buffer[8] = { 0 };
             _write_byte(bus, OWB_ROM_READ);
-            _read_block(bus, buffer, 8);
-
-            // device provides LSB first
-            for (int i = 7; i >= 0; --i)
-            {
-                // watch out for integer promotion
-                rom_code |= ((uint64_t)buffer[i] << (8 * i));
-            }
+            _read_block(bus, rom_code.bytes, sizeof(rom_code));
 
             if (bus->use_crc)
             {
-                // check CRC
-                uint8_t crc = 0;
-                for (int i = 0; i < 8; ++i)
-                {
-                    crc = _calc_crc(crc, buffer[i]);
-                }
-                ESP_LOGD(TAG, "crc 0x%02x", crc);
-
-                if (crc != 0)
+                if (owb_crc8_bytes(0, rom_code.bytes, sizeof(rom_code)) != 0)
                 {
                     ESP_LOGE(TAG, "CRC failed");
-                    rom_code = 0;
+                    memset(rom_code.bytes, 0, sizeof(rom_code));
                 }
-
-                ESP_LOGD(TAG, "rom_code 0x%08" PRIx64, rom_code);
             }
+            ESP_LOGD(TAG, "rom_code %08" PRIx64, rom_code);
         }
         else
         {
@@ -486,21 +480,19 @@ const uint8_t * owb_write_bytes(const OneWireBus * bus, const uint8_t * buffer, 
     return _write_block(bus, buffer, len);
 }
 
-void owb_write_rom_code(const OneWireBus * bus, uint64_t rom_code)
+void owb_write_rom_code(const OneWireBus * bus, OneWireBus_ROMCode rom_code)
 {
-    uint8_t buffer[sizeof(uint64_t)] = {0};
-    for (int i = 0; i < sizeof(buffer); ++i)
-    {
-        // LSB first
-        buffer[i] = rom_code & 0xFF;
-        rom_code >>= 8;
-    }
-    _write_block(bus, buffer, sizeof(buffer));
+    _write_block(bus, (uint8_t *)&rom_code, sizeof(rom_code));
 }
 
-uint8_t owb_crc8(uint8_t crc, uint8_t data)
+uint8_t owb_crc8_byte(uint8_t crc, uint8_t data)
 {
     return _calc_crc(crc, data);
+}
+
+uint8_t owb_crc8_bytes(uint8_t crc, const uint8_t * data, size_t len)
+{
+    return _calc_crc_block(crc, data, len);
 }
 
 bool owb_search_first(const OneWireBus * bus, OneWireBus_SearchState * state)
@@ -508,7 +500,7 @@ bool owb_search_first(const OneWireBus * bus, OneWireBus_SearchState * state)
     bool result = false;
     if (state != NULL)
     {
-        memset(state->rom_code, 0, sizeof(state->rom_code));
+        memset(&state->rom_code, 0, sizeof(state->rom_code));
         state->last_discrepancy = 0;
         state->last_family_discrepancy = 0;
         state->last_device_flag = false;

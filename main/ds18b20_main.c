@@ -3,6 +3,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
+#include "esp_log.h"
 
 // Uncomment to enable static (stack-based) allocation of instances and avoid malloc/free.
 //#define USE_STATIC 1
@@ -22,6 +23,8 @@
 
 void app_main()
 {
+    esp_log_level_set("*", ESP_LOG_INFO);        // set all components to INFO level
+
     // Create a 1-Wire bus
 #ifdef USE_STATIC
     OneWireBus_Static owb_static;        // static allocation
@@ -34,19 +37,20 @@ void app_main()
     owb_use_crc(owb, true);              // enable CRC check for ROM code
 
     // find all connected devices
-    uint8_t device_rom_codes[8][MAX_DEVICES] = {0};
+    printf("Find devices:\n");
+    OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
     int num_devices = 0;
     OneWireBus_SearchState search_state = {0};
     bool found = owb_search_first(owb, &search_state);
     while (found)
     {
-        printf("Device %d found: ", num_devices);
+        printf("  %d : ", num_devices);
         for (int i = 7; i >= 0; i--)
         {
-            device_rom_codes[num_devices][i] = search_state.rom_code[i];
-            printf("%02x", search_state.rom_code[i]);
+            printf("%02x", ((uint8_t *)(&search_state.rom_code))[i]);
         }
         printf("\n");
+        device_rom_codes[num_devices] = search_state.rom_code;
         ++num_devices;
         found = owb_search_next(owb, &search_state);
     }
@@ -80,24 +84,26 @@ void app_main()
         DS18B20_Info * ds18b20_info = ds18b20_malloc();  // heap allocation
         devices[i] = ds18b20_info;
 #endif
-        uint64_t rom_code = 0;
-        for (int j = 7; j >= 0; --j)
-        {
-            rom_code |= ((uint64_t)device_rom_codes[i][j] << (8 * j));
-        }
-        printf("1-Wire ROM code 0x%08" PRIx64 "\n", rom_code);
+//        uint64_t rom_code = 0;
+//        for (int j = 7; j >= 0; --j)
+//        {
+//            rom_code |= ((uint64_t)device_rom_codes[i][j] << (8 * j));
+//        }
+//        printf("1-Wire ROM code 0x%08" PRIx64 "\n", rom_code);
 
-        ds18b20_init(ds18b20_info, owb, rom_code);     // associate with bus and device
+        //ds18b20_init(ds18b20_info, owb, rom_code);     // associate with bus and device
+        ds18b20_init(ds18b20_info, owb, device_rom_codes[i]); // associate with bus and device
         //ds18b20_init_solo(ds18b20_info, owb);          // only one device on bus
         ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
     }
 
     while (1)
     {
+        printf("\nTemperature readings (degrees C):\n");
         for (int i = 0; i < num_devices; ++i)
         {
             float temp = ds18b20_get_temp(devices[i]);
-            printf("Temp %d: %.1f degrees C\n", i, temp);
+            printf("  %d: %.2f\n", i, temp);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

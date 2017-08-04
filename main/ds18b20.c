@@ -15,7 +15,7 @@
 #include "ds18b20.h"
 #include "owb.h"
 
-#define TAG "ds18b20"
+static const char * TAG = "ds18b20";
 
 
 // Function commands
@@ -32,7 +32,7 @@ struct _DS18B20_Info
     bool init;
     bool use_crc;
     OneWireBus * bus;
-    uint64_t rom_code;
+    OneWireBus_ROMCode rom_code;
 };
 
 static bool _is_init(const DS18B20_Info * ds18b20_info)
@@ -83,7 +83,7 @@ void ds18b20_free(DS18B20_Info ** ds18b20_info)
     }
 }
 
-void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, uint64_t rom_code)
+void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMCode rom_code)
 {
     if (ds18b20_info != NULL)
     {
@@ -146,14 +146,7 @@ float ds18b20_get_temp(DS18B20_Info * ds18b20_info)
                 temp_LSB = buffer[0];
                 temp_MSB = buffer[1];
 
-                uint8_t crc = 0;
-                for (int i = 0; i < 9; ++i)
-                {
-                    crc = owb_crc8(crc, buffer[i]);
-                }
-                ESP_LOGD(TAG, "crc 0x%02x", crc);
-
-                if (crc != 0)
+                if (owb_crc8_bytes(0, buffer, 9) != 0)
                 {
                     ESP_LOGE(TAG, "CRC failed");
                     temp_LSB = temp_MSB = 0;

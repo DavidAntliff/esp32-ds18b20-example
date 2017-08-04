@@ -28,8 +28,9 @@ void ds18b20_free(DS18B20_Info ** ds18b20_info);
  * @brief Initialise a device info instance with the specified GPIO.
  * @param[in] ds18b20_info Pointer to device info instance.
  * @param[in] bus Pointer to initialised 1-Wire bus instance.
+ * @param[in] rom_code Device-specific ROM code to identify a device on the bus.
  */
-void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, uint64_t rom_code);
+void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMCode rom_code);
 
 /**
  * @brief Enable or disable use of CRC checks on device communications.
