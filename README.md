@@ -15,7 +15,8 @@ It is written and tested for the [ESP-IDF](https://github.com/espressif/esp-idf)
  * 1-Wire device detection and validation, including search for multiple devices on a single bus.
  * 1-Wire bus operations including multi-byte read and write operations.
  * CRC checks on ROM code and temperature data.
- * Temperature convertion and retrieval.
+ * Programmable temperature measurement resolution (9, 10, 11 or 12-bit resolution).
+ * Temperature conversion and retrieval.
 
 ## Documentation
 
@@ -47,9 +48,8 @@ Parts of this code are based on references provided to the public domain by Maxi
 The following features are anticipated but not yet implemented:
 
  * Simultaneous temperature conversion from multiple devices.
- * Device configuration including resolution.
  * Alarm support.
+ * EEPROM support.
  * Single device optimisations - avoid ROM addressing when only one device exists.
  * Parasitic power support.
- * EEPROM support.
 

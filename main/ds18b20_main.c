@@ -42,7 +42,7 @@
 
 void app_main()
 {
-    esp_log_level_set("*", ESP_LOG_DEBUG);
+    esp_log_level_set("*", ESP_LOG_INFO);
 
     // Create a 1-Wire bus
 #ifdef USE_STATIC
@@ -112,6 +112,10 @@ void app_main()
         ds18b20_init(ds18b20_info, owb, device_rom_codes[i]); // associate with bus and device
         //ds18b20_init_solo(ds18b20_info, owb);          // only one device on bus
         ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
+//        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_9_BIT);
+//        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_10_BIT);
+//        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_11_BIT);
+        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_12_BIT);
     }
 
     // read temperatures from all sensors
@@ -121,7 +125,7 @@ void app_main()
         for (int i = 0; i < num_devices; ++i)
         {
             float temp = ds18b20_get_temp(devices[i]);
-            printf("  %d: %.2f\n", i, temp);
+            printf("  %d: %.3f\n", i, temp);
         }
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }

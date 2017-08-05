@@ -45,6 +45,7 @@ extern "C" {
  */
 typedef enum
 {
+    DS18B20_RESOLUTION_INVALID = -1,  ///< Invalid resolution
     DS18B20_RESOLUTION_9_BIT   = 9,   ///< 9-bit resolution, LSB bits 2,1,0 undefined
     DS18B20_RESOLUTION_10_BIT  = 10,  ///< 10-bit resolution, LSB bits 1,0 undefined
     DS18B20_RESOLUTION_11_BIT  = 11,  ///< 11-bit resolution, LSB bit 0 undefined
@@ -92,6 +93,25 @@ void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMC
  * @param[in] use_crc True to enable CRC checks, false to disable.
  */
 void ds18b20_use_crc(DS18B20_Info * ds18b20_info, bool use_crc);
+
+/**
+ * @brief Set temperature measurement resolution.
+ *
+ * This programs the hardware to the specified resolution and sets the cached value to be the same.
+ * If the program fails, the value currently in hardware is used to refresh the cache.
+ *
+ * @param[in] ds18b20_info Pointer to device info instance.
+ * @param[in] resolution Selected resolution.
+ * @return True if successful, otherwise false.
+ */
+bool ds18b20_set_resolution(DS18B20_Info * ds18b20_info, DS18B20_RESOLUTION resolution);
+
+/**
+ * @brief Update and return the current temperature measurement resolution from the device.
+ * @param[in] ds18b20_info Pointer to device info instance.
+ * @return The currently configured temperature measurement resolution.
+ */
+DS18B20_RESOLUTION ds18b20_read_resolution(DS18B20_Info * ds18b20_info);
 
 /**
  * @brief Read 64-bit ROM code from device - only works when there is a single device on the bus.

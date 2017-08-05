@@ -24,6 +24,11 @@
 
 /**
  * @file ds18b20.c
+ *
+ * Resolution is cached in the DS18B20_Info object to avoid querying the hardware
+ * every time a temperature conversion is required. However this can result in the
+ * cached value becoming inconsistent with the hardware value, so care must be taken.
+ *
  */
 
 #include <stddef.h>
@@ -31,6 +36,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <math.h>
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -43,7 +49,7 @@
 #include "owb.h"
 
 static const char * TAG = "ds18b20";
-
+static const int T_CONV = 750;   // maximum conversion time at 12-bit resolution in milliseconds
 
 // Function commands
 #define DS18B20_FUNCTION_TEMP_CONVERT       0x44
@@ -53,6 +59,16 @@ static const char * TAG = "ds18b20";
 #define DS18B20_FUNCTION_EEPROM_RECALL      0xB8
 #define DS18B20_FUNCTION_POWER_SUPPLY_READ  0xB4
 
+
+typedef struct
+{
+    uint8_t temperature[2];    // [0] is LSB, [1] is MSB
+    uint8_t trigger_high;
+    uint8_t trigger_low;
+    uint8_t configuration;
+    uint8_t reserved[3];
+    uint8_t crc;
+} Scratchpad;
 
 static bool _is_init(const DS18B20_Info * ds18b20_info)
 {
@@ -99,6 +115,58 @@ static float _decode_temp(uint8_t lsb, uint8_t msb, DS18B20_RESOLUTION resolutio
     return result;
 }
 
+static size_t _min(size_t x, size_t y)
+{
+    return x > y ? y : x;
+}
+
+static Scratchpad _read_scratchpad(const DS18B20_Info * ds18b20_info, size_t count)
+{
+    count = _min(sizeof(Scratchpad), count);   // avoid overflow
+    Scratchpad scratchpad = {0};
+    ESP_LOGD(TAG, "scratchpad read %d bytes: ", count);
+    owb_reset(ds18b20_info->bus);
+    owb_write_byte(ds18b20_info->bus, OWB_ROM_MATCH);
+    owb_write_rom_code(ds18b20_info->bus, ds18b20_info->rom_code);
+    owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_READ);
+    owb_read_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad, count);
+    esp_log_buffer_hex(TAG, &scratchpad, count);
+    return scratchpad;
+}
+
+static bool _write_scratchpad(const DS18B20_Info * ds18b20_info, const Scratchpad * scratchpad, bool verify)
+{
+    bool result = false;
+    // Only bytes 2, 3 and 4 (trigger and configuration) can be written.
+    // All three bytes MUST be written before the next reset to avoid corruption.
+    if (_is_init(ds18b20_info))
+    {
+        owb_reset(ds18b20_info->bus);
+        owb_write_byte(ds18b20_info->bus, OWB_ROM_MATCH);
+        owb_write_rom_code(ds18b20_info->bus, ds18b20_info->rom_code);
+        owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_WRITE);
+        owb_write_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad->trigger_high, 3);
+        ESP_LOGD(TAG, "scratchpad write 3 bytes:");
+        esp_log_buffer_hex(TAG, &scratchpad->trigger_high, 3);
+        result = true;
+
+        if (verify)
+        {
+            Scratchpad read = _read_scratchpad(ds18b20_info, offsetof(Scratchpad, configuration) + 1);
+            if (memcmp(&scratchpad->trigger_high, &read.trigger_high, 3) != 0)
+            {
+                ESP_LOGE(TAG, "scratchpad verify failed: "
+                        "wrote {0x%02x, 0x%02x, 0x%02x}, "
+                        "read {0x%02x, 0x%02x, 0x%02x}",
+                        scratchpad->trigger_high, scratchpad->trigger_low, scratchpad->configuration,
+                        read.trigger_high, read.trigger_low, read.configuration);
+                result = false;
+            }
+        }
+    }
+    return result;
+}
+
 DS18B20_Info * ds18b20_malloc(void)
 {
     DS18B20_Info * ds18b20_info = malloc(sizeof(*ds18b20_info));
@@ -132,8 +200,11 @@ void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMC
         ds18b20_info->bus = bus;
         ds18b20_info->rom_code = rom_code;
         ds18b20_info->use_crc = false;
-        ds18b20_info->resolution = DS18B20_RESOLUTION_12_BIT;
+        ds18b20_info->resolution = DS18B20_RESOLUTION_INVALID;
         ds18b20_info->init = true;
+
+        // read current resolution from device as it may not be power-on or factory default
+        ds18b20_info->resolution = ds18b20_read_resolution(ds18b20_info);
     }
     else
     {
@@ -150,6 +221,82 @@ void ds18b20_use_crc(DS18B20_Info * ds18b20_info, bool use_crc)
     }
 }
 
+bool ds18b20_set_resolution(DS18B20_Info * ds18b20_info, DS18B20_RESOLUTION resolution)
+{
+    bool result = false;
+    if (_is_init(ds18b20_info))
+    {
+        if (_check_resolution(ds18b20_info->resolution))
+        {
+            // read scratchpad up to and including configuration register
+            Scratchpad scratchpad = _read_scratchpad(ds18b20_info,
+                    offsetof(Scratchpad, configuration) - offsetof(Scratchpad, temperature) + 1);
+
+            // modify configuration register to set resolution
+            uint8_t value = (((resolution - 1) & 0x03) << 5) | 0x1f;
+            scratchpad.configuration = value;
+            ESP_LOGD(TAG, "configuration value 0x%02x", value);
+
+            // write bytes 2, 3 and 4 of scratchpad
+            result = _write_scratchpad(ds18b20_info, &scratchpad, /* verify */ true);
+            if (result)
+            {
+                ds18b20_info->resolution = resolution;
+                ESP_LOGI(TAG, "Resolution set to %d bits", (int)resolution);
+            }
+            else
+            {
+                // Resolution change failed - update the info resolution with the value read from configuration
+                ds18b20_info->resolution = ds18b20_read_resolution(ds18b20_info);
+                ESP_LOGW(TAG, "Resolution consistency lost - refreshed from device: %d", ds18b20_info->resolution);
+            }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "Unsupported resolution %d", resolution);
+        }
+    }
+    return result;
+}
+
+DS18B20_RESOLUTION ds18b20_read_resolution(DS18B20_Info * ds18b20_info)
+{
+    DS18B20_RESOLUTION resolution = DS18B20_RESOLUTION_INVALID;
+    if (_is_init(ds18b20_info))
+    {
+        // read scratchpad up to and including configuration register
+        Scratchpad scratchpad = _read_scratchpad(ds18b20_info,
+                offsetof(Scratchpad, configuration) - offsetof(Scratchpad, temperature) + 1);
+
+        resolution = ((scratchpad.configuration >> 5) & 0x03) + DS18B20_RESOLUTION_9_BIT;
+        if (!_check_resolution(resolution))
+        {
+            ESP_LOGE(TAG, "invalid resolution read from device: 0x%02x", scratchpad.configuration);
+            resolution = DS18B20_RESOLUTION_INVALID;
+        }
+        else
+        {
+            ESP_LOGI(TAG, "Resolution read as %d", resolution);
+        }
+    }
+    return resolution;
+}
+
+static void _wait_for_conversion(DS18B20_RESOLUTION resolution)
+{
+    if (_check_resolution(resolution))
+    {
+        int divisor = 1 << (DS18B20_RESOLUTION_12_BIT - resolution);
+        ESP_LOGD(TAG, "divisor %d", divisor);
+        float max_conversion_time = (float)T_CONV / (float)divisor;
+        int ticks = ceil(max_conversion_time / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "wait for conversion: %.3f ms, %d ticks", max_conversion_time, ticks);
+
+        // wait at least this maximum conversion time
+        vTaskDelay(ticks);
+    }
+}
+
 float ds18b20_get_temp(DS18B20_Info * ds18b20_info)
 {
     float temp = 0.0f;
@@ -162,7 +309,8 @@ float ds18b20_get_temp(DS18B20_Info * ds18b20_info)
             owb_write_byte(bus, OWB_ROM_MATCH);
             owb_write_rom_code(bus, ds18b20_info->rom_code);
             owb_write_byte(bus, DS18B20_FUNCTION_TEMP_CONVERT);
-            vTaskDelay(750 / portTICK_PERIOD_MS);
+
+            _wait_for_conversion(ds18b20_info->resolution);
 
             // reset
             owb_reset(bus);
