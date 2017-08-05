@@ -6,6 +6,8 @@ This is a ESP32-compatible C library for the Maxim Integrated DS18B20 Programmab
 
 It supports multiple devices on the same 1-Wire bus.
 
+It is written and tested for the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0).
+
 ## Supported Features
 
  * External power supply mode (parasitic mode not yet supported).
@@ -17,7 +19,7 @@ It supports multiple devices on the same 1-Wire bus.
 
 ## Documentation
 
-API documentation (doxygen) is available [here](https://...). 
+Automatically generated API documentation (doxygen) is available [here](https://davidantliff.github.io/ESP32-DS18B20/index.html).
 
 ## Source Code
 

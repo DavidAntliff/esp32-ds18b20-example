@@ -31,7 +31,6 @@
 #include <stdlib.h>
 #include <stdbool.h>
 #include <stdint.h>
-#include <inttypes.h>  // for PRIu64
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"

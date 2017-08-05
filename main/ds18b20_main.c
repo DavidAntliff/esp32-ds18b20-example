@@ -72,7 +72,11 @@ void app_main()
     }
 
     // known ROM codes (LSB first):
-    OneWireBus_ROMCode known_device = { { {0x28}, {0xee, 0xcc, 0x87, 0x2e, 0x16, 0x01}, {0x00} } };
+    OneWireBus_ROMCode known_device = {
+        .fields.family = { 0x28 },
+        .fields.serial_number = { 0xee, 0xcc, 0x87, 0x2e, 0x16, 0x01 },
+        .fields.crc = { 0x00 },
+    };
     char rom_code_s[17];
     owb_string_from_rom_code(known_device, rom_code_s, sizeof(rom_code_s));
     printf("Device %s is %s\n", rom_code_s, owb_verify_rom(owb, known_device) ? "present" : "not present");
@@ -81,7 +85,6 @@ void app_main()
     //uint64_t rom_code = 0xf402162c6149ee28;  // green
     //uint64_t rom_code = 0x1502162ca5b2ee28;  // orange
     //uint64_t rom_code = owb_read_rom(owb);
-    //printf("1-Wire ROM code 0x%08" PRIx64 "\n", rom_code);
 
     // Create a DS18B20 device on the 1-Wire bus
 #ifdef USE_STATIC
@@ -106,19 +109,12 @@ void app_main()
         DS18B20_Info * ds18b20_info = ds18b20_malloc();  // heap allocation
         devices[i] = ds18b20_info;
 #endif
-//        uint64_t rom_code = 0;
-//        for (int j = 7; j >= 0; --j)
-//        {
-//            rom_code |= ((uint64_t)device_rom_codes[i][j] << (8 * j));
-//        }
-//        printf("1-Wire ROM code 0x%08" PRIx64 "\n", rom_code);
-
-        //ds18b20_init(ds18b20_info, owb, rom_code);     // associate with bus and device
         ds18b20_init(ds18b20_info, owb, device_rom_codes[i]); // associate with bus and device
         //ds18b20_init_solo(ds18b20_info, owb);          // only one device on bus
         ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
     }
 
+    // read temperatures from all sensors
     while (1)
     {
         printf("\nTemperature readings (degrees C):\n");
@@ -130,13 +126,11 @@ void app_main()
         vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
-    for (int i = 10; i >= 0; i--) {
-        printf("Restarting in %d seconds...\n", i);
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
-    }
-
+#ifndef USE_STATIC
+    // clean up dynamically allocated data
     ds18b20_free(&ds18b20_info);
     owb_free(&owb);
+#endif
 
     printf("Restarting now.\n");
     fflush(stdout);
