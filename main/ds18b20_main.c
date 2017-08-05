@@ -137,18 +137,31 @@ void app_main()
     {
         while (1)
         {
-            printf("\nTemperature readings (degrees C):\n");
+            TickType_t start_ticks = xTaskGetTickCount();
+
             ds18b20_convert_all(owb);
 
-            // we know all devices use the same resolution, so use the first device to determine the delay
+            // in this application all devices use the same resolution,
+            // so use the first device to determine the delay
             ds18b20_wait_for_conversion(devices[0]);
 
+            // read the results immediately after conversion otherwise it may fail
+            // (using printf before reading may take too long)
+            float temps[MAX_DEVICES] = { 0 };
             for (int i = 0; i < num_devices; ++i)
             {
-                float temp = ds18b20_read_temp(devices[i]);
-                printf("  %d: %.3f\n", i, temp);
+                temps[i] = ds18b20_read_temp(devices[i]);
             }
-            vTaskDelay(1000 / portTICK_PERIOD_MS);
+
+            // print results in a separate loop, after all have been read
+            printf("\nTemperature readings (degrees C):\n");
+            for (int i = 0; i < num_devices; ++i)
+            {
+                printf("  %d: %.3f\n", i, temps[i]);
+            }
+
+            // make up delay to approximately 1 second per measurement
+            vTaskDelay(1000 / portTICK_PERIOD_MS - (xTaskGetTickCount() - start_ticks));
         }
     }
 

@@ -143,6 +143,9 @@ bool ds18b20_convert(const DS18B20_Info * ds18b20_info);
 
 /**
  * @brief Start temperature conversion on all connected devices.
+ *
+ * This should be followed by a sufficient delay to ensure all devices complete
+ * their conversion before the measurements are read.
  * @param[in] bus Pointer to initialised bus instance.
  */
 void ds18b20_convert_all(const OneWireBus * bus);
@@ -150,8 +153,9 @@ void ds18b20_convert_all(const OneWireBus * bus);
 /**
  * @brief Wait for the maximum conversion time according to the current resolution of the device.
  * @param[in] bus Pointer to initialised bus instance.
+ * @return An estimate of the time elapsed, in milliseconds. Actual elapsed time may be greater.
  */
-void ds18b20_wait_for_conversion(const DS18B20_Info * ds18b20_info);
+float ds18b20_wait_for_conversion(const DS18B20_Info * ds18b20_info);
 
 /**
  * @brief Read last temperature measurement from device.

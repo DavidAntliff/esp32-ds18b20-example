@@ -144,8 +144,9 @@ static bool _check_resolution(DS18B20_RESOLUTION resolution)
     return (resolution >= DS18B20_RESOLUTION_9_BIT) && (resolution <= DS18B20_RESOLUTION_12_BIT);
 }
 
-static void _wait_for_conversion(DS18B20_RESOLUTION resolution)
+static float _wait_for_conversion(DS18B20_RESOLUTION resolution)
 {
+    float elapsed_time = 0.0f;
     if (_check_resolution(resolution))
     {
         int divisor = 1 << (DS18B20_RESOLUTION_12_BIT - resolution);
@@ -156,7 +157,11 @@ static void _wait_for_conversion(DS18B20_RESOLUTION resolution)
 
         // wait at least this maximum conversion time
         vTaskDelay(ticks);
+
+        // TODO: measure elapsed time more accurately
+        elapsed_time = ticks * portTICK_PERIOD_MS;
     }
+    return elapsed_time;
 }
 
 static float _decode_temp(uint8_t lsb, uint8_t msb, DS18B20_RESOLUTION resolution)
@@ -385,17 +390,16 @@ void ds18b20_convert_all(const OneWireBus * bus)
     owb_reset(bus);
     owb_write_byte(bus, OWB_ROM_SKIP);
     owb_write_byte(bus, DS18B20_FUNCTION_TEMP_CONVERT);
-
-    // wait the maximum conversion duration
-    _wait_for_conversion(DS18B20_RESOLUTION_12_BIT);
 }
 
-void ds18b20_wait_for_conversion(const DS18B20_Info * ds18b20_info)
+float ds18b20_wait_for_conversion(const DS18B20_Info * ds18b20_info)
 {
+    float elapsed_time = 0.0f;
     if (_is_init(ds18b20_info))
     {
-        _wait_for_conversion(ds18b20_info->resolution);
+        elapsed_time = _wait_for_conversion(ds18b20_info->resolution);
     }
+    return elapsed_time;
 }
 
 float ds18b20_read_temp(const DS18B20_Info * ds18b20_info)
