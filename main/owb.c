@@ -42,28 +42,27 @@ static const char * TAG = "owb";
 /// @cond ignore
 struct _OneWireBus_Timing
 {
-    int A, B, C, D, E, F, G, H, I, J;
+    uint32_t A, B, C, D, E, F, G, H, I, J;
 };
 //// @endcond
 
-// 1-Wire timing delays (standard) in ticks (quarter-microseconds).
+// 1-Wire timing delays (standard) in microseconds.
+// Labels and values are from https://www.maximintegrated.com/en/app-notes/index.mvp/id/126
 static const struct _OneWireBus_Timing _StandardTiming = {
-        6 * 4,
-        64 * 4,
-        60 * 4,
-        10 * 4,
-        9 * 4,
-        55 * 4,
-        0,        // G
-        480 * 4,  // H
-        70 * 4,   // I
-        410 * 4,  // J
+        6,    // A - read/write "1" master pull DQ low duration
+        64,   // B - write "0" master pull DQ low duration
+        60,   // C - write "1" master pull DQ high duration
+        10,   // D - write "0" master pull DQ high duration
+        9,    // E - read master pull DQ high duration
+        55,   // F - complete read timeslot + 10ms recovery
+        0,    // G - wait before reset
+        480,  // H - master pull DQ low duration
+        70,   // I - master pull DQ high duration
+        410,  // J - complete presence timeslot + recovery
 };
 
-static void _tick_delay(int ticks)
+static void _us_delay(uint32_t time_us)
 {
-    // Each tick is 0.25 microseconds.
-    float time_us = ticks / 4.0;
     ets_delay_us(time_us);
 }
 
@@ -90,7 +89,7 @@ bool _is_init(const OneWireBus * bus)
 }
 
 /**
- * @brief Generate a 1-Wire reset.
+ * @brief Generate a 1-Wire reset (initialization).
  * @param[in] bus Initialised bus instance.
  * @return true if device is present, otherwise false.
  */
@@ -101,15 +100,15 @@ static bool _reset(const OneWireBus * bus)
     {
         gpio_set_direction(bus->gpio, GPIO_MODE_OUTPUT);
 
-        _tick_delay(bus->timing->G);
+        _us_delay(bus->timing->G);
         gpio_set_level(bus->gpio, 0);  // Drive DQ low
-        _tick_delay(bus->timing->H);
+        _us_delay(bus->timing->H);
         gpio_set_level(bus->gpio, 1);  // Release the bus
-        _tick_delay(bus->timing->I);
+        _us_delay(bus->timing->I);
 
         gpio_set_direction(bus->gpio, GPIO_MODE_INPUT);
         int level1 = gpio_get_level(bus->gpio);
-        _tick_delay(bus->timing->J);   // Complete the reset sequence recovery
+        _us_delay(bus->timing->J);   // Complete the reset sequence recovery
         int level2 = gpio_get_level(bus->gpio);
 
         present = (level1 == 0) && (level2 == 1);   // Sample for presence pulse from slave
@@ -131,9 +130,9 @@ static void _write_bit(const OneWireBus * bus, int bit)
         int delay2 = bit ? bus->timing->B : bus->timing->D;
         gpio_set_direction(bus->gpio, GPIO_MODE_OUTPUT);
         gpio_set_level(bus->gpio, 0);  // Drive DQ low
-        _tick_delay(delay1);
+        _us_delay(delay1);
         gpio_set_level(bus->gpio, 1);  // Release the bus
-        _tick_delay(delay2);
+        _us_delay(delay2);
     }
 }
 
@@ -148,13 +147,13 @@ static int _read_bit(const OneWireBus * bus)
     {
         gpio_set_direction(bus->gpio, GPIO_MODE_OUTPUT);
         gpio_set_level(bus->gpio, 0);  // Drive DQ low
-        _tick_delay(bus->timing->A);
+        _us_delay(bus->timing->A);
         gpio_set_level(bus->gpio, 1);  // Release the bus
-        _tick_delay(bus->timing->E);
+        _us_delay(bus->timing->E);
 
         gpio_set_direction(bus->gpio, GPIO_MODE_INPUT);
         int level = gpio_get_level(bus->gpio);
-        _tick_delay(bus->timing->F);   // Complete the timeslot and 10us recovery
+        _us_delay(bus->timing->F);   // Complete the timeslot and 10us recovery
         result = level & 0x01;
     }
     return result;

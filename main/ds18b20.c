@@ -76,6 +76,29 @@ static bool _is_init(const DS18B20_Info * ds18b20_info)
     return ok;
 }
 
+static bool _check_resolution(DS18B20_RESOLUTION resolution)
+{
+    return (resolution >= DS18B20_RESOLUTION_9_BIT) && (resolution <= DS18B20_RESOLUTION_12_BIT);
+}
+
+static float _decode_temp(uint8_t lsb, uint8_t msb, DS18B20_RESOLUTION resolution)
+{
+    float result = 0.0f;
+    if (_check_resolution(resolution))
+    {
+        // masks to remove undefined bits from result
+        static const uint8_t lsb_mask[4] = { ~0x03, ~0x02, ~0x01, ~0x00 };
+        uint8_t lsb_masked = lsb_mask[resolution - DS18B20_RESOLUTION_9_BIT] & lsb;
+        int16_t raw = (msb << 8) | lsb_masked;
+        result = raw / 16.0f;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "Unsupported resolution %d", resolution);
+    }
+    return result;
+}
+
 DS18B20_Info * ds18b20_malloc(void)
 {
     DS18B20_Info * ds18b20_info = malloc(sizeof(*ds18b20_info));
@@ -109,6 +132,7 @@ void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMC
         ds18b20_info->bus = bus;
         ds18b20_info->rom_code = rom_code;
         ds18b20_info->use_crc = false;
+        ds18b20_info->resolution = DS18B20_RESOLUTION_12_BIT;
         ds18b20_info->init = true;
     }
     else
@@ -149,7 +173,7 @@ float ds18b20_get_temp(DS18B20_Info * ds18b20_info)
 
             uint8_t temp_LSB = 0;
             uint8_t temp_MSB = 0;
-            if (ds18b20_info->use_crc)
+            if (!ds18b20_info->use_crc)
             {
                 // Without CRC:
                 temp_LSB = owb_read_byte(bus);
@@ -173,7 +197,7 @@ float ds18b20_get_temp(DS18B20_Info * ds18b20_info)
             }
 
             ESP_LOGD(TAG, "temp_LSB 0x%02x, temp_MSB 0x%02x", temp_LSB, temp_MSB);
-            temp = (float)(((temp_MSB << 8) + temp_LSB) >> 4);
+            temp = _decode_temp(temp_LSB, temp_MSB, ds18b20_info->resolution);
         }
         else
         {

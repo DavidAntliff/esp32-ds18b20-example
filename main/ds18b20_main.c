@@ -42,7 +42,7 @@
 
 void app_main()
 {
-    esp_log_level_set("*", ESP_LOG_INFO);
+    esp_log_level_set("*", ESP_LOG_DEBUG);
 
     // Create a 1-Wire bus
 #ifdef USE_STATIC

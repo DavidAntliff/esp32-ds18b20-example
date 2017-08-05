@@ -41,15 +41,27 @@ extern "C" {
 #endif
 
 /**
+ * @brief Symbols for the supported temperature resolution of the device.
+ */
+typedef enum
+{
+    DS18B20_RESOLUTION_9_BIT   = 9,   ///< 9-bit resolution, LSB bits 2,1,0 undefined
+    DS18B20_RESOLUTION_10_BIT  = 10,  ///< 10-bit resolution, LSB bits 1,0 undefined
+    DS18B20_RESOLUTION_11_BIT  = 11,  ///< 11-bit resolution, LSB bit 0 undefined
+    DS18B20_RESOLUTION_12_BIT  = 12,  ///< 12-bit resolution (default)
+} DS18B20_RESOLUTION;
+
+/**
  * @brief Structure containing information related to a single DS18B20 device connected
  * via a 1-Wire bus.
  */
 typedef struct
 {
-    bool init;                    ///< True if struct has been initialised, otherwise false.
-    bool use_crc;                 ///< True if CRC checks are to be used when retrieving information from a device on the bus
-    OneWireBus * bus;             ///< Pointer to 1-Wire bus information relevant to this device.
-    OneWireBus_ROMCode rom_code;  ///< The ROM code used to address this device on the bus.
+    bool init;                     ///< True if struct has been initialised, otherwise false
+    bool use_crc;                  ///< True if CRC checks are to be used when retrieving information from a device on the bus
+    OneWireBus * bus;              ///< Pointer to 1-Wire bus information relevant to this device
+    OneWireBus_ROMCode rom_code;   ///< The ROM code used to address this device on the bus
+    DS18B20_RESOLUTION resolution; ///< Temperature measurement resolution per reading
 } DS18B20_Info;
 
 /**
