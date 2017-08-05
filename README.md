@@ -52,6 +52,7 @@ Parts of this code are based on references provided to the public domain by Maxi
 
 The following features are anticipated but not yet implemented:
 
+ * Documented examples.
  * Concurrency support (multiple tasks accessing devices on the same bus).
  * Alarm support.
  * EEPROM support.
