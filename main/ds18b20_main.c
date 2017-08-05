@@ -72,6 +72,11 @@ void app_main()
         found = owb_search_next(owb, &search_state);
     }
 
+    //uint64_t rom_code = 0x0001162e87ccee28;  // pink
+    //uint64_t rom_code = 0xf402162c6149ee28;  // green
+    //uint64_t rom_code = 0x1502162ca5b2ee28;  // orange
+    //uint64_t rom_code = owb_read_rom(owb);
+
     // known ROM codes (LSB first):
     OneWireBus_ROMCode known_device = {
         .fields.family = { 0x28 },
@@ -82,15 +87,8 @@ void app_main()
     owb_string_from_rom_code(known_device, rom_code_s, sizeof(rom_code_s));
     printf("Device %s is %s\n", rom_code_s, owb_verify_rom(owb, known_device) ? "present" : "not present");
 
-    //uint64_t rom_code = 0x0001162e87ccee28;  // pink
-    //uint64_t rom_code = 0xf402162c6149ee28;  // green
-    //uint64_t rom_code = 0x1502162ca5b2ee28;  // orange
-    //uint64_t rom_code = owb_read_rom(owb);
-
     // Create a DS18B20 device on the 1-Wire bus
 #ifdef USE_STATIC
-    DS18B20_Info ds18b20_info_static;       // static allocation
-    DS18B20_Info * ds18b20_info = &ds18b20_info_static;
     DS18B20_Info devices_static[MAX_DEVICES] = {0};
     DS18B20_Info * devices[MAX_DEVICES] = {0};
     for (int i = 0; i < MAX_DEVICES; ++i)
@@ -98,7 +96,6 @@ void app_main()
         devices[i] = &(devices_static[i]);
     }
 #else
-    DS18B20_Info * ds18b20_info = ds18b20_malloc();  // heap allocation
     DS18B20_Info * devices[MAX_DEVICES] = {0};
 #endif
 
@@ -123,21 +120,44 @@ void app_main()
         ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION);
     }
 
-    // read temperatures from all sensors sequentially
-    while (1)
+//    // read temperatures from all sensors sequentially
+//    while (1)
+//    {
+//        printf("\nTemperature readings (degrees C):\n");
+//        for (int i = 0; i < num_devices; ++i)
+//        {
+//            float temp = ds18b20_get_temp(devices[i]);
+//            printf("  %d: %.3f\n", i, temp);
+//        }
+//        vTaskDelay(1000 / portTICK_PERIOD_MS);
+//    }
+
+    // read temperatures more efficiently by starting conversions on all devices at the same time
+    if (num_devices > 0)
     {
-        printf("\nTemperature readings (degrees C):\n");
-        for (int i = 0; i < num_devices; ++i)
+        while (1)
         {
-            float temp = ds18b20_get_temp(devices[i]);
-            printf("  %d: %.3f\n", i, temp);
+            printf("\nTemperature readings (degrees C):\n");
+            ds18b20_convert_all(owb);
+
+            // we know all devices use the same resolution, so use the first device to determine the delay
+            ds18b20_wait_for_conversion(devices[0]);
+
+            for (int i = 0; i < num_devices; ++i)
+            {
+                float temp = ds18b20_read_temp(devices[i]);
+                printf("  %d: %.3f\n", i, temp);
+            }
+            vTaskDelay(1000 / portTICK_PERIOD_MS);
         }
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 
 #ifndef USE_STATIC
     // clean up dynamically allocated data
-    ds18b20_free(&ds18b20_info);
+    for (int i = 0; i < num_devices; ++i)
+    {
+        ds18b20_free(&devices[i]);
+    }
     owb_free(&owb);
 #endif
 

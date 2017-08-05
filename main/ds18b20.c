@@ -360,9 +360,9 @@ DS18B20_RESOLUTION ds18b20_read_resolution(DS18B20_Info * ds18b20_info)
     return resolution;
 }
 
-float ds18b20_get_temp(const DS18B20_Info * ds18b20_info)
+bool ds18b20_convert(const DS18B20_Info * ds18b20_info)
 {
-    float temp = 0.0f;
+    bool result = false;
     if (_is_init(ds18b20_info))
     {
         OneWireBus * bus = ds18b20_info->bus;
@@ -370,10 +370,42 @@ float ds18b20_get_temp(const DS18B20_Info * ds18b20_info)
         {
             // initiate a temperature measurement
             owb_write_byte(bus, DS18B20_FUNCTION_TEMP_CONVERT);
+            result = true;
+        }
+        else
+        {
+            ESP_LOGE(TAG, "ds18b20 device not responding");
+        }
+    }
+    return result;
+}
 
-            // wait at least maximum conversion time
-            _wait_for_conversion(ds18b20_info->resolution);
+void ds18b20_convert_all(const OneWireBus * bus)
+{
+    owb_reset(bus);
+    owb_write_byte(bus, OWB_ROM_SKIP);
+    owb_write_byte(bus, DS18B20_FUNCTION_TEMP_CONVERT);
 
+    // wait the maximum conversion duration
+    _wait_for_conversion(DS18B20_RESOLUTION_12_BIT);
+}
+
+void ds18b20_wait_for_conversion(const DS18B20_Info * ds18b20_info)
+{
+    if (_is_init(ds18b20_info))
+    {
+        _wait_for_conversion(ds18b20_info->resolution);
+    }
+}
+
+float ds18b20_read_temp(const DS18B20_Info * ds18b20_info)
+{
+    float temp = 0.0f;
+    if (_is_init(ds18b20_info))
+    {
+        OneWireBus * bus = ds18b20_info->bus;
+        if (_address_device(ds18b20_info))
+        {
             // read measurement
             _address_device(ds18b20_info);
             owb_write_byte(bus, DS18B20_FUNCTION_SCRATCHPAD_READ);
@@ -411,6 +443,23 @@ float ds18b20_get_temp(const DS18B20_Info * ds18b20_info)
             ESP_LOGE(TAG, "ds18b20 device not responding");
         }
     }
-
     return temp;
 }
+
+float ds18b20_convert_and_read_temp(const DS18B20_Info * ds18b20_info)
+{
+    float temp = 0.0f;
+    if (_is_init(ds18b20_info))
+    {
+        if (ds18b20_convert(ds18b20_info))
+        {
+            // wait at least maximum conversion time
+            _wait_for_conversion(ds18b20_info->resolution);
+
+            temp = ds18b20_read_temp(ds18b20_info);
+        }
+    }
+    return temp;
+}
+
+

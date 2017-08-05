@@ -136,12 +136,39 @@ DS18B20_RESOLUTION ds18b20_read_resolution(DS18B20_Info * ds18b20_info);
 OneWireBus_ROMCode ds18b20_read_rom(DS18B20_Info * ds18b20_info);
 
 /**
- * @brief Get current temperature from device.
- * @param[in] ds18b20_info Pointer to device info instance. Must be initialised first.
- * @return The current temperature returned by the device, in degrees Celsius.
+ * @brief Start a temperature measurement conversion on a single device.
+ * @param[in] ds18b20_info Pointer to device info instance.
  */
-float ds18b20_get_temp(const DS18B20_Info * ds18b20_info);
+bool ds18b20_convert(const DS18B20_Info * ds18b20_info);
 
+/**
+ * @brief Start temperature conversion on all connected devices.
+ * @param[in] bus Pointer to initialised bus instance.
+ */
+void ds18b20_convert_all(const OneWireBus * bus);
+
+/**
+ * @brief Wait for the maximum conversion time according to the current resolution of the device.
+ * @param[in] bus Pointer to initialised bus instance.
+ */
+void ds18b20_wait_for_conversion(const DS18B20_Info * ds18b20_info);
+
+/**
+ * @brief Read last temperature measurement from device.
+ *
+ * This is typically called after ds18b20_start_mass_conversion(), provided enough time
+ * has elapsed to ensure that all devices have completed their conversions.
+ * @param[in] ds18b20_info Pointer to device info instance. Must be initialised first.
+ * @return The measurement value returned by the device, in degrees Celsius.
+ */
+float ds18b20_read_temp(const DS18B20_Info * ds18b20_info);
+
+/**
+ * @brief Convert, wait and read current temperature from device.
+ * @param[in] ds18b20_info Pointer to device info instance. Must be initialised first.
+ * @return The measurement value returned by the device, in degrees Celsius.
+ */
+float ds18b20_convert_and_read_temp(const DS18B20_Info * ds18b20_info);
 
 #ifdef __cplusplus
 }

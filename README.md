@@ -21,6 +21,7 @@ This library includes:
  * CRC checks on ROM code and temperature data.
  * Programmable temperature measurement resolution (9, 10, 11 or 12-bit resolution).
  * Temperature conversion and retrieval.
+ * Separation of conversion and temperature retrieval to allow for simultaneous conversion across multiple devices.
 
 ## Documentation
 
@@ -51,7 +52,7 @@ Parts of this code are based on references provided to the public domain by Maxi
 
 The following features are anticipated but not yet implemented:
 
- * Simultaneous temperature conversion from multiple devices on the same bus - concurrency.
+ * Concurrency support (multiple tasks accessing devices on the same bus).
  * Alarm support.
  * EEPROM support.
  * Parasitic power support.

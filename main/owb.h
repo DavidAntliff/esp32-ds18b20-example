@@ -81,6 +81,20 @@ typedef union
 } OneWireBus_ROMCode;
 
 /**
+ * @brief Represents the state of a device search on the 1-Wire bus.
+ *
+ *        Pass a pointer to this structure to owb_search_first() and
+ *        owb_search_next() to iterate through detected devices on the bus.
+ */
+typedef struct
+{
+    OneWireBus_ROMCode rom_code;
+    int last_discrepancy;
+    int last_family_discrepancy;
+    int last_device_flag;
+} OneWireBus_SearchState;
+
+/**
  * @brief Construct a new 1-Wire bus instance.
  *        New instance should be initialised before calling other functions.
  * @return Pointer to new bus instance, or NULL if it cannot be created.
@@ -187,23 +201,6 @@ uint8_t owb_crc8_byte(uint8_t crc, uint8_t data);
  *         Should be zero if last byte was the CRC byte and the CRC matches.
  */
 uint8_t owb_crc8_bytes(uint8_t crc, const uint8_t * data, size_t len);
-
-
-// Search API
-
-/**
- * @brief Represents the state of a device search on the 1-Wire bus.
- *
- *        Pass a pointer to this structure to owb_search_first() and
- *        owb_search_next() to iterate through detected devices on the bus.
- */
-typedef struct
-{
-    OneWireBus_ROMCode rom_code;
-    int last_discrepancy;
-    int last_family_discrepancy;
-    int last_device_flag;
-} OneWireBus_SearchState;
 
 /**
  * @brief Locates the first device on the 1-Wire bus, if present.
