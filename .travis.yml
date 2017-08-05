@@ -24,7 +24,7 @@ addons:
 
 # Build the docs
 script:
-  - cd docs
+  - cd doc
   - doxygen
 
 # Deploy using Travis-CI/GitHub Pages integration support
@@ -34,5 +34,5 @@ deploy:
   local_dir: $TRAVIS_BUILD_DIR/docs/html
   github_token: $GITHUB_API_KEY
   on:
-    branch: master
+    branch: gh-pages
 
