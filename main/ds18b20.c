@@ -70,6 +70,23 @@ typedef struct
     uint8_t crc;
 } Scratchpad;
 
+static void _init(DS18B20_Info * ds18b20_info, OneWireBus * bus)
+{
+    if (ds18b20_info != NULL)
+    {
+        ds18b20_info->bus = bus;
+        memset(&ds18b20_info->rom_code, 0, sizeof(ds18b20_info->rom_code));
+        ds18b20_info->use_crc = false;
+        ds18b20_info->resolution = DS18B20_RESOLUTION_INVALID;
+        ds18b20_info->solo = false;   // assume multiple devices unless told otherwise
+        ds18b20_info->init = true;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "ds18b20_info is NULL");
+    }
+}
+
 static bool _is_init(const DS18B20_Info * ds18b20_info)
 {
     bool ok = false;
@@ -125,6 +142,21 @@ static bool _address_device(const DS18B20_Info * ds18b20_info)
 static bool _check_resolution(DS18B20_RESOLUTION resolution)
 {
     return (resolution >= DS18B20_RESOLUTION_9_BIT) && (resolution <= DS18B20_RESOLUTION_12_BIT);
+}
+
+static void _wait_for_conversion(DS18B20_RESOLUTION resolution)
+{
+    if (_check_resolution(resolution))
+    {
+        int divisor = 1 << (DS18B20_RESOLUTION_12_BIT - resolution);
+        ESP_LOGD(TAG, "divisor %d", divisor);
+        float max_conversion_time = (float)T_CONV / (float)divisor;
+        int ticks = ceil(max_conversion_time / portTICK_PERIOD_MS);
+        ESP_LOGD(TAG, "wait for conversion: %.3f ms, %d ticks", max_conversion_time, ticks);
+
+        // wait at least this maximum conversion time
+        vTaskDelay(ticks);
+    }
 }
 
 static float _decode_temp(uint8_t lsb, uint8_t msb, DS18B20_RESOLUTION resolution)
@@ -197,6 +229,9 @@ static bool _write_scratchpad(const DS18B20_Info * ds18b20_info, const Scratchpa
     return result;
 }
 
+
+// Public API
+
 DS18B20_Info * ds18b20_malloc(void)
 {
     DS18B20_Info * ds18b20_info = malloc(sizeof(*ds18b20_info));
@@ -220,23 +255,6 @@ void ds18b20_free(DS18B20_Info ** ds18b20_info)
         ESP_LOGD(TAG, "free %p", *ds18b20_info);
         free(*ds18b20_info);
         *ds18b20_info = NULL;
-    }
-}
-
-static void _init(DS18B20_Info * ds18b20_info, OneWireBus * bus)
-{
-    if (ds18b20_info != NULL)
-    {
-        ds18b20_info->bus = bus;
-        memset(&ds18b20_info->rom_code, 0, sizeof(ds18b20_info->rom_code));
-        ds18b20_info->use_crc = false;
-        ds18b20_info->resolution = DS18B20_RESOLUTION_INVALID;
-        ds18b20_info->solo = false;   // assume multiple devices unless told otherwise
-        ds18b20_info->init = true;
-    }
-    else
-    {
-        ESP_LOGE(TAG, "ds18b20_info is NULL");
     }
 }
 
@@ -340,21 +358,6 @@ DS18B20_RESOLUTION ds18b20_read_resolution(DS18B20_Info * ds18b20_info)
         }
     }
     return resolution;
-}
-
-static void _wait_for_conversion(DS18B20_RESOLUTION resolution)
-{
-    if (_check_resolution(resolution))
-    {
-        int divisor = 1 << (DS18B20_RESOLUTION_12_BIT - resolution);
-        ESP_LOGD(TAG, "divisor %d", divisor);
-        float max_conversion_time = (float)T_CONV / (float)divisor;
-        int ticks = ceil(max_conversion_time / portTICK_PERIOD_MS);
-        ESP_LOGD(TAG, "wait for conversion: %.3f ms, %d ticks", max_conversion_time, ticks);
-
-        // wait at least this maximum conversion time
-        vTaskDelay(ticks);
-    }
 }
 
 float ds18b20_get_temp(const DS18B20_Info * ds18b20_info)
