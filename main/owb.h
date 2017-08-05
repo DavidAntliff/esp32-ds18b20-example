@@ -22,6 +22,16 @@
  * SOFTWARE.
  */
 
+/**
+ * @file owb.h
+ * @brief Interface definitions for the 1-Wire bus component.
+ *
+ * This component provides structures and functions that are useful for communicating
+ * with devices connected to a Maxim Integrated 1-Wire® bus via a single GPIO.
+ *
+ * Currently only externally powered devices are supported. Parasitic power is not supported.
+ */
+
 #ifndef ONE_WIRE_BUS_H
 #define ONE_WIRE_BUS_H
 
@@ -40,7 +50,16 @@ extern "C" {
 #define OWB_ROM_SKIP          0xCC
 #define OWB_ROM_SEARCH_ALARM  0xEC
 
-typedef struct _OneWireBus OneWireBus;
+/**
+ * @brief Structure containing 1-Wire bus information relevant to a single instance.
+ */
+typedef struct
+{
+    bool init;                                  ///< True if struct has been initialised, otherwise false.
+    int gpio;                                   ///< Value of GPIO connected to 1-Wire bus
+    const struct _OneWireBus_Timing * timing;   ///< Pointer to timing information
+    bool use_crc;                               ///< True if CRC checks are to be used when retrieving information from a device on the bus
+} OneWireBus;
 
 /**
  * @brief Represents a 1-Wire ROM Code. This is a sequence of eight bytes, where
@@ -49,14 +68,15 @@ typedef struct _OneWireBus OneWireBus;
  */
 typedef union
 {
+    /// Provides access via field names
     struct fields
     {
-        uint8_t family[1];         // LSB - read/write first
-        uint8_t serial_number[6];
-        uint8_t crc[1];            // MSB
-    } fields;
+        uint8_t family[1];         ///< family identifier (1 byte, LSB - read/write first)
+        uint8_t serial_number[6];  ///< serial number (6 bytes)
+        uint8_t crc[1];            ///< CRC check byte (1 byte, MSB - read/write last)
+    } fields;                      ///< Provides access via field names
 
-    uint8_t bytes[8];
+    uint8_t bytes[8];              ///< Provides raw byte access
 
 } OneWireBus_ROMCode;
 
@@ -172,9 +192,10 @@ uint8_t owb_crc8_bytes(uint8_t crc, const uint8_t * data, size_t len);
 // Search API
 
 /**
- * @brief Represents the state of a device search on the 1-Wire bus. Pass a pointer to
- *        this structure to `owb_search_first` and `owb_search_next` to iterate through
- *        detected devices on the bus.
+ * @brief Represents the state of a device search on the 1-Wire bus.
+ *
+ *        Pass a pointer to this structure to owb_search_first() and
+ *        owb_search_next() to iterate through detected devices on the bus.
  */
 typedef struct
 {

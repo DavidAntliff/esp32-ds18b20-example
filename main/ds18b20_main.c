@@ -32,13 +32,8 @@
 // Uncomment to enable static (stack-based) allocation of instances and avoid malloc/free.
 //#define USE_STATIC 1
 
-#ifdef USE_STATIC
-#  include "owb_static.h"
-#  include "ds18b20_static.h"
-#else
-#  include "owb.h"
-#  include "ds18b20.h"
-#endif
+#include "owb.h"
+#include "ds18b20.h"
 
 
 #define GPIO_DS18B20_0 (GPIO_NUM_4)
@@ -51,7 +46,7 @@ void app_main()
 
     // Create a 1-Wire bus
 #ifdef USE_STATIC
-    OneWireBus_Static owb_static;        // static allocation
+    OneWireBus owb_static;        // static allocation
     OneWireBus * owb = &owb_static;
 #else
     OneWireBus * owb = owb_malloc();     // heap allocation
@@ -90,7 +85,7 @@ void app_main()
 
     // Create a DS18B20 device on the 1-Wire bus
 #ifdef USE_STATIC
-    DS18B20_Info_Static ds18b20_info_static;       // static allocation
+    DS18B20_Info ds18b20_info_static;       // static allocation
     DS18B20_Info * ds18b20_info = &ds18b20_info_static;
     DS18B20_Info devices_static[MAX_DEVICES] = {0};
     DS18B20_Info * devices[MAX_DEVICES] = {0};

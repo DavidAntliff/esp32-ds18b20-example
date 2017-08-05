@@ -22,6 +22,10 @@
  * SOFTWARE.
  */
 
+/**
+ * @file ds18b20.c
+ */
+
 #include <stddef.h>
 #include <string.h>
 #include <stdlib.h>
@@ -50,14 +54,6 @@ static const char * TAG = "ds18b20";
 #define DS18B20_FUNCTION_EEPROM_RECALL      0xB8
 #define DS18B20_FUNCTION_POWER_SUPPLY_READ  0xB4
 
-
-struct _DS18B20_Info
-{
-    bool init;
-    bool use_crc;
-    OneWireBus * bus;
-    OneWireBus_ROMCode rom_code;
-};
 
 static bool _is_init(const DS18B20_Info * ds18b20_info)
 {

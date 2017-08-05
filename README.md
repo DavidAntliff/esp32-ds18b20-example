@@ -1,4 +1,4 @@
-# DS18B20 1-Wire 
+# ESP32-DS18B20
 
 ## Introduction
 
@@ -15,14 +15,13 @@ It supports multiple devices on the same 1-Wire bus.
  * CRC checks on ROM code and temperature data.
  * Temperature convertion and retrieval.
 
-## Roadmap
+## Documentation
 
- * Simultaneous temperature conversion from multiple devices.
- * Device configuration including resolution.
- * Alarm support.
- * Single device optimisations - avoid ROM addressing when only one device exists.
- * Parasitic power support.
- * EEPROM support.
+API documentation (doxygen) is available [here](https://...). 
+
+## Source Code
+
+The source is available from [GitHub](https://www.github.com/DavidAntliff/ESP32-DS18B20).
 
 ## License
 
@@ -40,4 +39,15 @@ The code in this project is licensed under the MIT license - see LICENSE for det
 Parts of this code are based on references provided to the public domain by Maxim Integrated.
 
 "1-Wire" is a registered trademark of Maxim Integrated.
+
+## Roadmap
+
+The following features are anticipated but not yet implemented:
+
+ * Simultaneous temperature conversion from multiple devices.
+ * Device configuration including resolution.
+ * Alarm support.
+ * Single device optimisations - avoid ROM addressing when only one device exists.
+ * Parasitic power support.
+ * EEPROM support.
 

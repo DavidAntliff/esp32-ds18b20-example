@@ -22,6 +22,15 @@
  * SOFTWARE.
  */
 
+/**
+ * @file ds18b20.h
+ * @brief Interface definitions for the Maxim Integrated DS18B20 Programmable
+ *        Resolution 1-Wire Digital Thermometer device.
+ *
+ * This component provides structures and functions that are useful for communicating
+ * with DS18B20 devices connected via a Maxim Integrated 1-Wire® bus.
+ */
+
 #ifndef DS18B20_H
 #define DS18B20_H
 
@@ -31,8 +40,17 @@
 extern "C" {
 #endif
 
-
-typedef struct _DS18B20_Info DS18B20_Info;
+/**
+ * @brief Structure containing information related to a single DS18B20 device connected
+ * via a 1-Wire bus.
+ */
+typedef struct
+{
+    bool init;                    ///< True if struct has been initialised, otherwise false.
+    bool use_crc;                 ///< True if CRC checks are to be used when retrieving information from a device on the bus
+    OneWireBus * bus;             ///< Pointer to 1-Wire bus information relevant to this device.
+    OneWireBus_ROMCode rom_code;  ///< The ROM code used to address this device on the bus.
+} DS18B20_Info;
 
 /**
  * @brief Construct a new device info instance.
@@ -68,7 +86,7 @@ void ds18b20_use_crc(DS18B20_Info * ds18b20_info, bool use_crc);
  * @param[in] ds18b20_info Pointer to device info instance.
  * @return The 64-bit value read from the device's ROM.
  */
-uint64_t ds18b20_read_rom(DS18B20_Info * ds18b20_info);
+OneWireBus_ROMCode ds18b20_read_rom(DS18B20_Info * ds18b20_info);
 
 /**
  * @brief Get current temperature from device.

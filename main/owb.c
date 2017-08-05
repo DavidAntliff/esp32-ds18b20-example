@@ -22,6 +22,10 @@
  * SOFTWARE.
  */
 
+/**
+ * @file owb.c
+ */
+
 #include <stddef.h>
 #include <stdbool.h>
 #include <inttypes.h>
@@ -32,14 +36,15 @@
 #include "driver/gpio.h"
 
 #include "owb.h"
-#include "owb_static.h"
 
 static const char * TAG = "owb";
 
+/// @cond ignore
 struct _OneWireBus_Timing
 {
     int A, B, C, D, E, F, G, H, I, J;
 };
+//// @endcond
 
 // 1-Wire timing delays (standard) in ticks (quarter-microseconds).
 static const struct _OneWireBus_Timing _StandardTiming = {
