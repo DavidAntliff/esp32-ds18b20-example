@@ -34,4 +34,6 @@ deploy:
   local_dir: $TRAVIS_BUILD_DIR/doc/html
   github_token: $GITHUB_TOKEN
   on:
-    branch: gh-pages
+    branch: master
+  target_branch: gh-pages
+
