@@ -8,11 +8,15 @@ It supports multiple devices on the same 1-Wire bus.
 
 It is written and tested for the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0).
 
-## Supported Features
+## Features
+
+This library includes:
 
  * External power supply mode (parasitic mode not yet supported).
  * Static (stack-based) or dynamic (malloc-based) memory model.
+ * No globals - support any number of 1-Wire buses simultaneously.
  * 1-Wire device detection and validation, including search for multiple devices on a single bus.
+ * Addressing optimisation for a single (solo) device on a bus.
  * 1-Wire bus operations including multi-byte read and write operations.
  * CRC checks on ROM code and temperature data.
  * Programmable temperature measurement resolution (9, 10, 11 or 12-bit resolution).
@@ -47,9 +51,8 @@ Parts of this code are based on references provided to the public domain by Maxi
 
 The following features are anticipated but not yet implemented:
 
- * Simultaneous temperature conversion from multiple devices.
+ * Simultaneous temperature conversion from multiple devices on the same bus - concurrency.
  * Alarm support.
  * EEPROM support.
- * Single device optimisations - avoid ROM addressing when only one device exists.
  * Parasitic power support.
-
+ * FreeRTOS event-based example.

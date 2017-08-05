@@ -92,6 +92,36 @@ static bool _is_init(const DS18B20_Info * ds18b20_info)
     return ok;
 }
 
+static bool _address_device(const DS18B20_Info * ds18b20_info)
+{
+    bool present = false;
+    if (_is_init(ds18b20_info))
+    {
+        present = owb_reset(ds18b20_info->bus);
+        if (present)
+        {
+            if (ds18b20_info->solo)
+            {
+                // if there's only one device on the bus, we can skip
+                // sending the ROM code and instruct it directly
+                owb_write_byte(ds18b20_info->bus, OWB_ROM_SKIP);
+            }
+            else
+            {
+                // if there are multiple devices on the bus, a Match ROM command
+                // must be issued to address a specific slave
+                owb_write_byte(ds18b20_info->bus, OWB_ROM_MATCH);
+                owb_write_rom_code(ds18b20_info->bus, ds18b20_info->rom_code);
+            }
+        }
+        else
+        {
+            ESP_LOGE(TAG, "ds18b20 device not responding");
+        }
+    }
+    return present;
+}
+
 static bool _check_resolution(DS18B20_RESOLUTION resolution)
 {
     return (resolution >= DS18B20_RESOLUTION_9_BIT) && (resolution <= DS18B20_RESOLUTION_12_BIT);
@@ -125,12 +155,12 @@ static Scratchpad _read_scratchpad(const DS18B20_Info * ds18b20_info, size_t cou
     count = _min(sizeof(Scratchpad), count);   // avoid overflow
     Scratchpad scratchpad = {0};
     ESP_LOGD(TAG, "scratchpad read %d bytes: ", count);
-    owb_reset(ds18b20_info->bus);
-    owb_write_byte(ds18b20_info->bus, OWB_ROM_MATCH);
-    owb_write_rom_code(ds18b20_info->bus, ds18b20_info->rom_code);
-    owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_READ);
-    owb_read_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad, count);
-    esp_log_buffer_hex(TAG, &scratchpad, count);
+    if (_address_device(ds18b20_info))
+    {
+        owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_READ);
+        owb_read_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad, count);
+        esp_log_buffer_hex(TAG, &scratchpad, count);
+    }
     return scratchpad;
 }
 
@@ -141,26 +171,26 @@ static bool _write_scratchpad(const DS18B20_Info * ds18b20_info, const Scratchpa
     // All three bytes MUST be written before the next reset to avoid corruption.
     if (_is_init(ds18b20_info))
     {
-        owb_reset(ds18b20_info->bus);
-        owb_write_byte(ds18b20_info->bus, OWB_ROM_MATCH);
-        owb_write_rom_code(ds18b20_info->bus, ds18b20_info->rom_code);
-        owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_WRITE);
-        owb_write_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad->trigger_high, 3);
-        ESP_LOGD(TAG, "scratchpad write 3 bytes:");
-        esp_log_buffer_hex(TAG, &scratchpad->trigger_high, 3);
-        result = true;
-
-        if (verify)
+        if (_address_device(ds18b20_info))
         {
-            Scratchpad read = _read_scratchpad(ds18b20_info, offsetof(Scratchpad, configuration) + 1);
-            if (memcmp(&scratchpad->trigger_high, &read.trigger_high, 3) != 0)
+            owb_write_byte(ds18b20_info->bus, DS18B20_FUNCTION_SCRATCHPAD_WRITE);
+            owb_write_bytes(ds18b20_info->bus, (uint8_t *)&scratchpad->trigger_high, 3);
+            ESP_LOGD(TAG, "scratchpad write 3 bytes:");
+            esp_log_buffer_hex(TAG, &scratchpad->trigger_high, 3);
+            result = true;
+
+            if (verify)
             {
-                ESP_LOGE(TAG, "scratchpad verify failed: "
-                        "wrote {0x%02x, 0x%02x, 0x%02x}, "
-                        "read {0x%02x, 0x%02x, 0x%02x}",
-                        scratchpad->trigger_high, scratchpad->trigger_low, scratchpad->configuration,
-                        read.trigger_high, read.trigger_low, read.configuration);
-                result = false;
+                Scratchpad read = _read_scratchpad(ds18b20_info, offsetof(Scratchpad, configuration) + 1);
+                if (memcmp(&scratchpad->trigger_high, &read.trigger_high, 3) != 0)
+                {
+                    ESP_LOGE(TAG, "scratchpad verify failed: "
+                            "wrote {0x%02x, 0x%02x, 0x%02x}, "
+                            "read {0x%02x, 0x%02x, 0x%02x}",
+                            scratchpad->trigger_high, scratchpad->trigger_low, scratchpad->configuration,
+                            read.trigger_high, read.trigger_low, read.configuration);
+                    result = false;
+                }
             }
         }
     }
@@ -193,15 +223,45 @@ void ds18b20_free(DS18B20_Info ** ds18b20_info)
     }
 }
 
-void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMCode rom_code)
+static void _init(DS18B20_Info * ds18b20_info, OneWireBus * bus)
 {
     if (ds18b20_info != NULL)
     {
         ds18b20_info->bus = bus;
-        ds18b20_info->rom_code = rom_code;
+        memset(&ds18b20_info->rom_code, 0, sizeof(ds18b20_info->rom_code));
         ds18b20_info->use_crc = false;
         ds18b20_info->resolution = DS18B20_RESOLUTION_INVALID;
+        ds18b20_info->solo = false;   // assume multiple devices unless told otherwise
         ds18b20_info->init = true;
+    }
+    else
+    {
+        ESP_LOGE(TAG, "ds18b20_info is NULL");
+    }
+}
+
+void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMCode rom_code)
+{
+    if (ds18b20_info != NULL)
+    {
+        _init(ds18b20_info, bus);
+        ds18b20_info->rom_code = rom_code;
+
+        // read current resolution from device as it may not be power-on or factory default
+        ds18b20_info->resolution = ds18b20_read_resolution(ds18b20_info);
+    }
+    else
+    {
+        ESP_LOGE(TAG, "ds18b20_info is NULL");
+    }
+}
+
+void ds18b20_init_solo(DS18B20_Info * ds18b20_info, OneWireBus * bus)
+{
+    if (ds18b20_info != NULL)
+    {
+        _init(ds18b20_info, bus);
+        ds18b20_info->solo = true;
 
         // read current resolution from device as it may not be power-on or factory default
         ds18b20_info->resolution = ds18b20_read_resolution(ds18b20_info);
@@ -297,26 +357,22 @@ static void _wait_for_conversion(DS18B20_RESOLUTION resolution)
     }
 }
 
-float ds18b20_get_temp(DS18B20_Info * ds18b20_info)
+float ds18b20_get_temp(const DS18B20_Info * ds18b20_info)
 {
     float temp = 0.0f;
     if (_is_init(ds18b20_info))
     {
         OneWireBus * bus = ds18b20_info->bus;
-        if (owb_reset(bus))
+        if (_address_device(ds18b20_info))
         {
-            //owb_write_byte(bus, OWB_ROM_SKIP);
-            owb_write_byte(bus, OWB_ROM_MATCH);
-            owb_write_rom_code(bus, ds18b20_info->rom_code);
+            // initiate a temperature measurement
             owb_write_byte(bus, DS18B20_FUNCTION_TEMP_CONVERT);
 
+            // wait at least maximum conversion time
             _wait_for_conversion(ds18b20_info->resolution);
 
-            // reset
-            owb_reset(bus);
-            //owb_write_byte(bus, OWB_ROM_SKIP);
-            owb_write_byte(bus, OWB_ROM_MATCH);
-            owb_write_rom_code(bus, ds18b20_info->rom_code);
+            // read measurement
+            _address_device(ds18b20_info);
             owb_write_byte(bus, DS18B20_FUNCTION_SCRATCHPAD_READ);
 
             uint8_t temp_LSB = 0;

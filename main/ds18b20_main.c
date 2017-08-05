@@ -36,8 +36,9 @@
 #include "ds18b20.h"
 
 
-#define GPIO_DS18B20_0 (GPIO_NUM_4)
-#define MAX_DEVICES (8)
+#define GPIO_DS18B20_0       (GPIO_NUM_5)
+#define MAX_DEVICES          (8)
+#define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_12_BIT)
 
 
 void app_main()
@@ -109,16 +110,20 @@ void app_main()
         DS18B20_Info * ds18b20_info = ds18b20_malloc();  // heap allocation
         devices[i] = ds18b20_info;
 #endif
-        ds18b20_init(ds18b20_info, owb, device_rom_codes[i]); // associate with bus and device
-        //ds18b20_init_solo(ds18b20_info, owb);          // only one device on bus
+        if (num_devices == 1)
+        {
+            printf("Single device optimisations enabled\n");
+            ds18b20_init_solo(ds18b20_info, owb);          // only one device on bus
+        }
+        else
+        {
+            ds18b20_init(ds18b20_info, owb, device_rom_codes[i]); // associate with bus and device
+        }
         ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
-//        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_9_BIT);
-//        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_10_BIT);
-//        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_11_BIT);
-        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION_12_BIT);
+        ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION);
     }
 
-    // read temperatures from all sensors
+    // read temperatures from all sensors sequentially
     while (1)
     {
         printf("\nTemperature readings (degrees C):\n");

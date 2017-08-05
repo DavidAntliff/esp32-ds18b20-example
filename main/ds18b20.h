@@ -59,6 +59,7 @@ typedef enum
 typedef struct
 {
     bool init;                     ///< True if struct has been initialised, otherwise false
+    bool solo;                     ///< True if device is intended to be the only one connected to the bus, otherwise false
     bool use_crc;                  ///< True if CRC checks are to be used when retrieving information from a device on the bus
     OneWireBus * bus;              ///< Pointer to 1-Wire bus information relevant to this device
     OneWireBus_ROMCode rom_code;   ///< The ROM code used to address this device on the bus
@@ -86,6 +87,20 @@ void ds18b20_free(DS18B20_Info ** ds18b20_info);
  * @param[in] rom_code Device-specific ROM code to identify a device on the bus.
  */
 void ds18b20_init(DS18B20_Info * ds18b20_info, OneWireBus * bus, OneWireBus_ROMCode rom_code);
+
+/**
+ * @brief Initialise a device info instance with the specified GPIO as a solo device on the bus.
+ *
+ * This is subject to the requirement that this device is the ONLY device on the bus.
+ * This allows for faster commands to be used without ROM code addressing.
+ *
+ * NOTE: if additional devices are added to the bus, operation will cease to work correctly.
+ *
+ * @param[in] ds18b20_info Pointer to device info instance.
+ * @param[in] bus Pointer to initialised 1-Wire bus instance.
+ * @param[in] rom_code Device-specific ROM code to identify a device on the bus.
+ */
+void ds18b20_init_solo(DS18B20_Info * ds18b20_info, OneWireBus * bus);
 
 /**
  * @brief Enable or disable use of CRC checks on device communications.
@@ -125,7 +140,7 @@ OneWireBus_ROMCode ds18b20_read_rom(DS18B20_Info * ds18b20_info);
  * @param[in] ds18b20_info Pointer to device info instance. Must be initialised first.
  * @return The current temperature returned by the device, in degrees Celsius.
  */
-float ds18b20_get_temp(DS18B20_Info * ds18b20_info);
+float ds18b20_get_temp(const DS18B20_Info * ds18b20_info);
 
 
 #ifdef __cplusplus
