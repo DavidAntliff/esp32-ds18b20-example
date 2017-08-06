@@ -59,7 +59,7 @@ static const int T_CONV = 750;   // maximum conversion time at 12-bit resolution
 #define DS18B20_FUNCTION_EEPROM_RECALL      0xB8
 #define DS18B20_FUNCTION_POWER_SUPPLY_READ  0xB4
 
-
+/// @cond ignore
 typedef struct
 {
     uint8_t temperature[2];    // [0] is LSB, [1] is MSB
@@ -69,6 +69,7 @@ typedef struct
     uint8_t reserved[3];
     uint8_t crc;
 } Scratchpad;
+/// @endcond ignore
 
 static void _init(DS18B20_Info * ds18b20_info, OneWireBus * bus)
 {
