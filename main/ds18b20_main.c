@@ -38,8 +38,7 @@
 
 #define GPIO_DS18B20_0       (GPIO_NUM_5)
 #define MAX_DEVICES          (8)
-#define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_12_BIT)
-
+#define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_11_BIT)
 
 void app_main()
 {
@@ -157,7 +156,7 @@ void app_main()
             printf("\nTemperature readings (degrees C):\n");
             for (int i = 0; i < num_devices; ++i)
             {
-                printf("  %d: %.3f\n", i, temps[i]);
+                printf("  %d: %.1f\n", i, temps[i]);
             }
 
             // make up delay to approximately 1 second per measurement
