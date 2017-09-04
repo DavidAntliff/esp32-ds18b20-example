@@ -20,6 +20,13 @@ Build the application with:
 
 The program should detect your connected devices and periodically obtain temperature readings from them, displaying them on the console.
 
+## Dependencies
+
+This application makes use of the following components (included as submodules):
+
+ * components/[esp32-owb](https://github.com/DavidAntliff/esp32-owb)
+ * components/[esp32-ds18b20](https://github.com/DavidAntliff/esp32-ds18b20)
+
 ## Hardware
 
 To run this example, connect one or more DS18B20 devices to a single GPIO on the ESP32. Use the recommended pull-up resistor of 4.k kOhms, connected to the 3.3V supply.
