@@ -1,4 +1,4 @@
-# ESP32-DS18B20
+# esp32-ds18b20-example
 
 ## Introduction
 
