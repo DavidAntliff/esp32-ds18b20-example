@@ -29,7 +29,7 @@ This application makes use of the following components (included as submodules):
 
 ## Hardware
 
-To run this example, connect one or more DS18B20 devices to a single GPIO on the ESP32. Use the recommended pull-up resistor of 4.k kOhms, connected to the 3.3V supply.
+To run this example, connect one or more DS18B20 devices to a single GPIO on the ESP32. Use the recommended pull-up resistor of 4.7 KOhms, connected to the 3.3V supply.
 
 `make menuconfig` can be used to set the 1-Wire GPIO.
 
