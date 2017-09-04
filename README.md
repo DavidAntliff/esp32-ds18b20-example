@@ -33,6 +33,8 @@ To run this example, connect one or more DS18B20 devices to a single GPIO on the
 
 `make menuconfig` can be used to set the 1-Wire GPIO.
 
+If you have several devices and see occasional CRC errors, consider using a 2.2 kOhm pull-up resistor instead. Also consider adding decoupling capacitors between the sensor supply voltage and ground, as close to each sensor as possible.
+
 ## Features
 
 This example provides:

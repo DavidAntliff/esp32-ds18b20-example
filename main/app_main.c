@@ -44,6 +44,9 @@ void app_main()
 {
     esp_log_level_set("*", ESP_LOG_INFO);
 
+    /// stable readings require a brief period before communication
+    vTaskDelay(1000.0 / portTICK_PERIOD_MS);
+
     // Create a 1-Wire bus
 #ifdef USE_STATIC
     OneWireBus owb_static;        // static allocation
@@ -132,6 +135,7 @@ void app_main()
 //    }
 
     // read temperatures more efficiently by starting conversions on all devices at the same time
+    int crc_errors[MAX_DEVICES] = {0};
     if (num_devices > 0)
     {
         while (1)
@@ -156,7 +160,12 @@ void app_main()
             printf("\nTemperature readings (degrees C):\n");
             for (int i = 0; i < num_devices; ++i)
             {
-                printf("  %d: %.1f\n", i, temps[i]);
+                if (temps[i] == DS18B20_INVALID_READING)
+                {
+                    ++crc_errors[i];
+                }
+
+                printf("  %d: %.1f    %d errors\n", i, temps[i], crc_errors[i]);
             }
 
             // make up delay to approximately 1 second per measurement
