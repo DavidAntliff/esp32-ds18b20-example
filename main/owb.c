@@ -271,7 +271,7 @@ static uint8_t _calc_crc_block(uint8_t crc, const uint8_t * buffer, size_t len)
     {
         crc8 = _calc_crc(crc8, *buffer++);
     }
-    while (len-- > 0);
+    while (--len > 0);
     return crc8;
 }
 
