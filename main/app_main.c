@@ -39,12 +39,13 @@
 #define GPIO_DS18B20_0       (GPIO_NUM_5)
 #define MAX_DEVICES          (8)
 #define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_11_BIT)
+#define SAMPLE_PERIOD        (1000)   // milliseconds
 
 void app_main()
 {
     esp_log_level_set("*", ESP_LOG_INFO);
 
-    /// stable readings require a brief period before communication
+    // Stable readings require a brief period before communication
     vTaskDelay(1000.0 / portTICK_PERIOD_MS);
 
     // Create a 1-Wire bus
@@ -58,7 +59,7 @@ void app_main()
     owb_init(owb, GPIO_DS18B20_0);
     owb_use_crc(owb, true);              // enable CRC check for ROM code
 
-    // find all connected devices
+    // Find all connected devices
     printf("Find devices:\n");
     OneWireBus_ROMCode device_rom_codes[MAX_DEVICES] = {0};
     int num_devices = 0;
@@ -79,7 +80,7 @@ void app_main()
     //uint64_t rom_code = 0x1502162ca5b2ee28;  // orange
     //uint64_t rom_code = owb_read_rom(owb);
 
-    // known ROM codes (LSB first):
+    // Known ROM code (LSB first):
     OneWireBus_ROMCode known_device = {
         .fields.family = { 0x28 },
         .fields.serial_number = { 0xee, 0xcc, 0x87, 0x2e, 0x16, 0x01 },
@@ -122,7 +123,7 @@ void app_main()
         ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION);
     }
 
-//    // read temperatures from all sensors sequentially
+//    // Read temperatures from all sensors sequentially
 //    while (1)
 //    {
 //        printf("\nTemperature readings (degrees C):\n");
@@ -134,7 +135,7 @@ void app_main()
 //        vTaskDelay(1000 / portTICK_PERIOD_MS);
 //    }
 
-    // read temperatures more efficiently by starting conversions on all devices at the same time
+    // Read temperatures more efficiently by starting conversions on all devices at the same time
     int crc_errors[MAX_DEVICES] = {0};
     if (num_devices > 0)
     {
@@ -144,11 +145,11 @@ void app_main()
 
             ds18b20_convert_all(owb);
 
-            // in this application all devices use the same resolution,
+            // In this application all devices use the same resolution,
             // so use the first device to determine the delay
             ds18b20_wait_for_conversion(devices[0]);
 
-            // read the results immediately after conversion otherwise it may fail
+            // Read the results immediately after conversion otherwise it may fail
             // (using printf before reading may take too long)
             float temps[MAX_DEVICES] = { 0 };
             for (int i = 0; i < num_devices; ++i)
@@ -156,7 +157,7 @@ void app_main()
                 temps[i] = ds18b20_read_temp(devices[i]);
             }
 
-            // print results in a separate loop, after all have been read
+            // Print results in a separate loop, after all have been read
             printf("\nTemperature readings (degrees C):\n");
             for (int i = 0; i < num_devices; ++i)
             {
@@ -168,8 +169,8 @@ void app_main()
                 printf("  %d: %.1f    %d errors\n", i, temps[i], crc_errors[i]);
             }
 
-            // make up delay to approximately 1 second per measurement
-            vTaskDelay(1000 / portTICK_PERIOD_MS - (xTaskGetTickCount() - start_ticks));
+            // Make up periodic delay to approximately one sample period per measurement
+            vTaskDelay(SAMPLE_PERIOD / portTICK_PERIOD_MS - (xTaskGetTickCount() - start_ticks));
         }
     }
 
