@@ -36,7 +36,7 @@
 #include "ds18b20.h"
 
 
-#define GPIO_DS18B20_0       (GPIO_NUM_5)
+#define GPIO_DS18B20_0       (CONFIG_ONE_WIRE_GPIO)
 #define MAX_DEVICES          (8)
 #define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_11_BIT)
 #define SAMPLE_PERIOD        (1000)   // milliseconds
@@ -74,6 +74,8 @@ void app_main()
         ++num_devices;
         found = owb_search_next(owb, &search_state);
     }
+
+    printf("Found %d devices\n", num_devices);
 
     //uint64_t rom_code = 0x0001162e87ccee28;  // pink
     //uint64_t rom_code = 0xf402162c6149ee28;  // green
@@ -185,5 +187,6 @@ void app_main()
 
     printf("Restarting now.\n");
     fflush(stdout);
+    vTaskDelay(1000 / portTICK_PERIOD_MS);
     esp_restart();
 }
