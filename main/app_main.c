@@ -38,7 +38,7 @@
 
 #define GPIO_DS18B20_0       (CONFIG_ONE_WIRE_GPIO)
 #define MAX_DEVICES          (8)
-#define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_11_BIT)
+#define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_12_BIT)
 #define SAMPLE_PERIOD        (1000)   // milliseconds
 
 void app_main()
@@ -139,6 +139,7 @@ void app_main()
 
     // Read temperatures more efficiently by starting conversions on all devices at the same time
     int crc_errors[MAX_DEVICES] = {0};
+    int sample_count = 0;
     if (num_devices > 0)
     {
         while (1)
@@ -160,7 +161,7 @@ void app_main()
             }
 
             // Print results in a separate loop, after all have been read
-            printf("\nTemperature readings (degrees C):\n");
+            printf("\nTemperature readings (degrees C): sample %d\n", ++sample_count);
             for (int i = 0; i < num_devices; ++i)
             {
                 if (temps[i] == DS18B20_INVALID_READING)
@@ -172,7 +173,10 @@ void app_main()
             }
 
             // Make up periodic delay to approximately one sample period per measurement
-            vTaskDelay(SAMPLE_PERIOD / portTICK_PERIOD_MS - (xTaskGetTickCount() - start_ticks));
+            if ((xTaskGetTickCount() - start_ticks) < (SAMPLE_PERIOD / portTICK_PERIOD_MS))
+            {
+                vTaskDelay(SAMPLE_PERIOD / portTICK_PERIOD_MS - (xTaskGetTickCount() - start_ticks));
+            }
         }
     }
 
