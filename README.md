@@ -1,5 +1,8 @@
 # esp32-ds18b20-example
 
+[![Build Status](https://travis-ci.org/DavidAntliff/esp32-ds18b20-example.svg?branch=master)](https://travis-ci.org/DavidAntliff/esp32-ds18b20-example)
+[![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
+
 ## Introduction
 
 This is an example application for the Maxim Integrated DS18B20 Programmable Resolution 1-Wire Digital Thermometer device.

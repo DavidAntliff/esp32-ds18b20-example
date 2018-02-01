@@ -145,13 +145,15 @@ void app_main()
 //    }
 
     // Read temperatures more efficiently by starting conversions on all devices at the same time
-    int crc_errors[MAX_DEVICES] = {0};
+    int errors_count[MAX_DEVICES] = {0};
     int sample_count = 0;
     if (num_devices > 0)
     {
+        TickType_t last_wake_time = xTaskGetTickCount();
+
         while (1)
         {
-            TickType_t start_ticks = xTaskGetTickCount();
+            last_wake_time = xTaskGetTickCount();
 
             ds18b20_convert_all(owb);
 
@@ -161,29 +163,27 @@ void app_main()
 
             // Read the results immediately after conversion otherwise it may fail
             // (using printf before reading may take too long)
-            float temps[MAX_DEVICES] = { 0 };
+            float readings[MAX_DEVICES] = { 0 };
+            DS18B20_ERROR errors[MAX_DEVICES] = { 0 };
+
             for (int i = 0; i < num_devices; ++i)
             {
-                temps[i] = ds18b20_read_temp(devices[i]);
+                errors[i] = ds18b20_read_temp(devices[i], &readings[i]);
             }
 
             // Print results in a separate loop, after all have been read
             printf("\nTemperature readings (degrees C): sample %d\n", ++sample_count);
             for (int i = 0; i < num_devices; ++i)
             {
-                if (temps[i] == DS18B20_INVALID_READING)
+                if (errors[i] != DS18B20_OK)
                 {
-                    ++crc_errors[i];
+                    ++errors_count[i];
                 }
 
-                printf("  %d: %.1f    %d errors\n", i, temps[i], crc_errors[i]);
+                printf("  %d: %.1f    %d errors\n", i, readings[i], errors_count[i]);
             }
 
-            // Make up periodic delay to approximately one sample period per measurement
-            if ((xTaskGetTickCount() - start_ticks) < (SAMPLE_PERIOD / portTICK_PERIOD_MS))
-            {
-                vTaskDelay(SAMPLE_PERIOD / portTICK_PERIOD_MS - (xTaskGetTickCount() - start_ticks));
-            }
+            vTaskDelayUntil(&last_wake_time, SAMPLE_PERIOD / portTICK_PERIOD_MS);
         }
     }
 
