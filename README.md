@@ -6,7 +6,9 @@ This is an example application for the Maxim Integrated DS18B20 Programmable Res
 
 It supports a single or multiple devices on the same 1-Wire bus.
 
-It is written and tested for the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0).
+It is written and tested for v3.0 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0, crosstool-ng-1.22.0-80-g6c4433a).
+
+Support for ESP-IDF v2.1 is available on the [ESP-IDF_v2.1](https://github.com/DavidAntliff/esp32-ds18b20-example/tree/ESP-IDF_v2.1) branch.
 
 Ensure that submodules are cloned:
 
