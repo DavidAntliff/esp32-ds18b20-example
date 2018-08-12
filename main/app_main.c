@@ -29,13 +29,9 @@
 #include "esp_system.h"
 #include "esp_log.h"
 
-// Uncomment to enable static (stack-based) allocation of instances and avoid malloc/free.
-//#define USE_STATIC 1
-
 #include "owb.h"
 #include "owb_rmt.h"
 #include "ds18b20.h"
-
 
 #define GPIO_DS18B20_0       (CONFIG_ONE_WIRE_GPIO)
 #define MAX_DEVICES          (8)
@@ -44,24 +40,20 @@
 
 void app_main()
 {
+    // Override global log level
     esp_log_level_set("*", ESP_LOG_INFO);
+
+    // To debug OWB, use 'make menuconfig' to set default Log level to DEBUG, then uncomment:
+    //esp_log_level_set("owb", ESP_LOG_DEBUG);
 
     // Stable readings require a brief period before communication
     vTaskDelay(2000.0 / portTICK_PERIOD_MS);
 
-    // Create a 1-Wire bus
-//#ifdef USE_STATIC
-//    OneWireBus owb_static;        // static allocation
-//    OneWireBus * owb = &owb_static;
-//#else
-//    OneWireBus * owb = owb_malloc();     // heap allocation
-//#endif
+    // Create a 1-Wire bus, using the RMT timeslot driver
     OneWireBus * owb;
     owb_rmt_driver_info rmt_driver_info;
     owb = owb_rmt_initialize(&rmt_driver_info, GPIO_DS18B20_0, RMT_CHANNEL_1, RMT_CHANNEL_0);
-
-//    owb_init(owb, GPIO_DS18B20_0);
-    owb_use_crc(owb, true);              // enable CRC check for ROM code
+    owb_use_crc(owb, true);  // enable CRC check for ROM code
 
     // Find all connected devices
     printf("Find devices:\n");
@@ -79,46 +71,59 @@ void app_main()
         ++num_devices;
         owb_search_next(owb, &search_state, &found);
     }
+    printf("Found %d device%s\n", num_devices, num_devices == 1 ? "" : "s");
 
-    printf("Found %d devices\n", num_devices);
+    // In this example, if a single device is present, then the ROM code is probably
+    // not very interesting, so just print it out. If there are multiple devices,
+    // then it may be useful to check that a specific device is present.
 
-    //uint64_t rom_code = 0x0001162e87ccee28;  // pink
-    //uint64_t rom_code = 0xf402162c6149ee28;  // green
-    //uint64_t rom_code = 0x1502162ca5b2ee28;  // orange
-    //uint64_t rom_code = owb_read_rom(owb);
-
-    // Known ROM code (LSB first):
-    OneWireBus_ROMCode known_device = {
-        .fields.family = { 0x28 },
-        .fields.serial_number = { 0xee, 0xcc, 0x87, 0x2e, 0x16, 0x01 },
-        .fields.crc = { 0x00 },
-    };
-    char rom_code_s[17];
-    owb_string_from_rom_code(known_device, rom_code_s, sizeof(rom_code_s));
-    bool is_present = false;
-    owb_verify_rom(owb, known_device, &is_present);
-    printf("Device %s is %s\n", rom_code_s, is_present ? "present" : "not present");
-
-    // Create a DS18B20 device on the 1-Wire bus
-#ifdef USE_STATIC
-    DS18B20_Info devices_static[MAX_DEVICES] = {0};
-    DS18B20_Info * devices[MAX_DEVICES] = {0};
-    for (int i = 0; i < MAX_DEVICES; ++i)
+    if (num_devices == 1)
     {
-        devices[i] = &(devices_static[i]);
+        // For a single device only:
+        OneWireBus_ROMCode rom_code;
+        owb_status status = owb_read_rom(owb, &rom_code);
+        if (status == OWB_STATUS_OK)
+        {
+            char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
+            owb_string_from_rom_code(rom_code, rom_code_s, sizeof(rom_code_s));
+            printf("Single device %s present\n", rom_code_s);
+        }
+        else
+        {
+            printf("An error occurred reading ROM code: %d", status);
+        }
     }
-#else
-    DS18B20_Info * devices[MAX_DEVICES] = {0};
-#endif
+    else
+    {
+        // Search for a known ROM code (LSB first):
+        // For example: 0x1502162ca5b2ee28
+        OneWireBus_ROMCode known_device = {
+            .fields.family = { 0x28 },
+            .fields.serial_number = { 0xee, 0xb2, 0xa5, 0x2c, 0x16, 0x02 },
+            .fields.crc = { 0x15 },
+        };
+        char rom_code_s[OWB_ROM_CODE_STRING_LENGTH];
+        owb_string_from_rom_code(known_device, rom_code_s, sizeof(rom_code_s));
+        bool is_present = false;
 
+        owb_status search_status = owb_verify_rom(owb, known_device, &is_present);
+        if (search_status == OWB_STATUS_OK)
+        {
+            printf("Device %s is %s\n", rom_code_s, is_present ? "present" : "not present");
+        }
+        else
+        {
+            printf("An error occurred searching for known device: %d", search_status);
+        }
+    }
+
+    // Create DS18B20 devices on the 1-Wire bus
+    DS18B20_Info * devices[MAX_DEVICES] = {0};
     for (int i = 0; i < num_devices; ++i)
     {
-#ifdef USE_STATIC
-        DS18B20_Info * ds18b20_info = devices[i];
-#else
         DS18B20_Info * ds18b20_info = ds18b20_malloc();  // heap allocation
         devices[i] = ds18b20_info;
-#endif
+
         if (num_devices == 1)
         {
             printf("Single device optimisations enabled\n");
@@ -187,14 +192,12 @@ void app_main()
         }
     }
 
-#ifndef USE_STATIC
     // clean up dynamically allocated data
     for (int i = 0; i < num_devices; ++i)
     {
         ds18b20_free(&devices[i]);
     }
-//    owb_free(&owb);
-#endif
+    owb_uninitialize(owb);
 
     printf("Restarting now.\n");
     fflush(stdout);
