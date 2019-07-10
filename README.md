@@ -23,6 +23,12 @@ Build the application with:
     $ make menuconfig    # set your serial configuration and the 1-Wire GPIO - see below
     $ make flash monitor
 
+For version 3.2 or newer of ESP-IDF, you can build with the CMake build system:
+
+    $ $IDF_PATH/tools/idf.py menuconfig  # set your serial configuration and the 1-Wire GPIO - see below
+    $ $IDF_PATH/tools/idf.py build
+    $ $IDF_PATH/tools/idf.py flash monitor
+
 The program should detect your connected devices and periodically obtain temperature readings from them, displaying them on the console.
 
 ## Dependencies
