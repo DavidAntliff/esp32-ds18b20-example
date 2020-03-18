@@ -192,6 +192,10 @@ void app_main()
             vTaskDelayUntil(&last_wake_time, SAMPLE_PERIOD / portTICK_PERIOD_MS);
         }
     }
+    else
+    {
+        printf("\nNo DS18B20 devices detected!\n");
+    }
 
     // clean up dynamically allocated data
     for (int i = 0; i < num_devices; ++i)
