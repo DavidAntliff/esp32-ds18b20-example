@@ -45,6 +45,7 @@ void app_main()
 
     // To debug OWB, use 'make menuconfig' to set default Log level to DEBUG, then uncomment:
     //esp_log_level_set("owb", ESP_LOG_DEBUG);
+    //esp_log_level_set("ds18b20", ESP_LOG_DEBUG);
 
     // Stable readings require a brief period before communication
     vTaskDelay(2000.0 / portTICK_PERIOD_MS);
@@ -190,6 +191,10 @@ void app_main()
 
             vTaskDelayUntil(&last_wake_time, SAMPLE_PERIOD / portTICK_PERIOD_MS);
         }
+    }
+    else
+    {
+        printf("\nNo DS18B20 devices detected!\n");
     }
 
     // clean up dynamically allocated data
