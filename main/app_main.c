@@ -43,8 +43,9 @@ void app_main()
     // Override global log level
     esp_log_level_set("*", ESP_LOG_INFO);
 
-    // To debug OWB, use 'make menuconfig' to set default Log level to DEBUG, then uncomment:
+    // To debug, use 'make menuconfig' to set default Log level to DEBUG, then uncomment:
     //esp_log_level_set("owb", ESP_LOG_DEBUG);
+    //esp_log_level_set("ds18b20", ESP_LOG_DEBUG);
 
     // Stable readings require a brief period before communication
     vTaskDelay(2000.0 / portTICK_PERIOD_MS);
@@ -133,7 +134,7 @@ void app_main()
         {
             ds18b20_init(ds18b20_info, owb, device_rom_codes[i]); // associate with bus and device
         }
-        ds18b20_use_crc(ds18b20_info, true);           // enable CRC check for temperature readings
+        ds18b20_use_crc(ds18b20_info, true);           // enable CRC check on all reads
         ds18b20_set_resolution(ds18b20_info, DS18B20_RESOLUTION);
     }
 
@@ -190,6 +191,10 @@ void app_main()
 
             vTaskDelayUntil(&last_wake_time, SAMPLE_PERIOD / portTICK_PERIOD_MS);
         }
+    }
+    else
+    {
+        printf("\nNo DS18B20 devices detected!\n");
     }
 
     // clean up dynamically allocated data
