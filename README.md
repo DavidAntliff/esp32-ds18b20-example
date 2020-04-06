@@ -19,7 +19,7 @@ Ensure that submodules are cloned:
 
 Build the application with:
 
-    $ cd esp32-ds18b20-example.git
+    $ cd esp32-ds18b20-example
     $ make menuconfig    # set your serial configuration and the 1-Wire GPIO - see below
     $ make flash monitor
 
