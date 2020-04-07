@@ -6,4 +6,4 @@ include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 project(esp32-ds18b20-example)
 
 # Ignore false clang warnings about `struct foo = { 0 }`
-target_compile_options(${IDF_PROJECT_EXECUTABLE} PRIVATE -Wno-missing-braces -Wmissing-field-initializers)
+target_compile_options(${project_elf} PRIVATE -Wno-missing-braces -Wmissing-field-initializers)
