@@ -1,5 +1,6 @@
 # esp32-ds18b20-example
 
+[![Platform: ESP-IDF](https://img.shields.io/badge/ESP--IDF-v3.0%2B-blue.svg)](https://docs.espressif.com/projects/esp-idf/en/stable/get-started/)
 [![Build Status](https://travis-ci.org/DavidAntliff/esp32-ds18b20-example.svg?branch=master)](https://travis-ci.org/DavidAntliff/esp32-ds18b20-example)
 [![license](https://img.shields.io/github/license/mashape/apistatus.svg)]()
 
