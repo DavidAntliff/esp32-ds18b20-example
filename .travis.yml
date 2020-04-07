@@ -29,7 +29,7 @@ install:
   # Make xtensa-esp32-elf available for all terminal sessions
   - export PATH=$PATH:$HOME/esp/xtensa-esp32-elf/bin
   # Get ESP-IDF from github
-  - git clone --recursive --branch release/v3.3 https://github.com/espressif/esp-idf.git
+  - git clone --recursive --branch release/v3.3 --single-branch --shallow-submodules https://github.com/espressif/esp-idf.git
   # Set the path to ESP-IDF directory
   - export IDF_PATH=~/esp/esp-idf
   # Install python dependencies
