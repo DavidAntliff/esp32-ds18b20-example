@@ -9,9 +9,7 @@ This is an example application for the Maxim Integrated DS18B20 Programmable Res
 
 It supports a single or multiple devices on the same 1-Wire bus.
 
-It is written and tested for v3.0 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0, crosstool-ng-1.22.0-80-g6c4433a).
-
-Support for ESP-IDF v2.1 is available on the [ESP-IDF_v2.1](https://github.com/DavidAntliff/esp32-ds18b20-example/tree/ESP-IDF_v2.1) branch.
+It is written and tested for v3.3 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0, crosstool-ng-1.22.0-80-g6c4433a).
 
 Ensure that submodules are cloned:
 
@@ -20,14 +18,9 @@ Ensure that submodules are cloned:
 Build the application with:
 
     $ cd esp32-ds18b20-example
-    $ make menuconfig    # set your serial configuration and the 1-Wire GPIO - see below
-    $ make flash monitor
-
-For version 3.2 or newer of ESP-IDF, you can build with the CMake build system:
-
-    $ $IDF_PATH/tools/idf.py menuconfig  # set your serial configuration and the 1-Wire GPIO - see below
-    $ $IDF_PATH/tools/idf.py build
-    $ $IDF_PATH/tools/idf.py flash monitor
+    $ idf.py menuconfig    # set your serial configuration and the 1-Wire GPIO - see below
+    $ idf.py build
+    $ idf.py -p (PORT) flash monitor
 
 The program should detect your connected devices and periodically obtain temperature readings from them, displaying them on the console.
 
@@ -42,7 +35,7 @@ This application makes use of the following components (included as submodules):
 
 To run this example, connect one or more DS18B20 devices to a single GPIO on the ESP32. Use the recommended pull-up resistor of 4.7 KOhms, connected to the 3.3V supply.
 
-`make menuconfig` can be used to set the 1-Wire GPIO.
+`idf.py menuconfig` can be used to set the 1-Wire GPIO.
 
 If you have several devices and see occasional CRC errors, consider using a 2.2 kOhm pull-up resistor instead. Also consider adding decoupling capacitors between the sensor supply voltage and ground, as close to each sensor as possible.
 
