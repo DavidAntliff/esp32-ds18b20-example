@@ -3,7 +3,7 @@
 cmake_minimum_required(VERSION 3.5)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
-project(esp32-ds18b20-example)
+project(esp32-ds18b20-example LANGUAGES C)
 
 if (NOT IDF_VERSION_MAJOR)
   set(IDF_VERSION_MAJOR 3)
