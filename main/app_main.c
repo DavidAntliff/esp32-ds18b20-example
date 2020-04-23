@@ -40,7 +40,6 @@ _Noreturn void app_main()
 {
     // Override global log level
     esp_log_level_set("*", ESP_LOG_INFO);
-    esp_log_level_set("*", ESP_LOG_DEBUG);
 
     // To debug, use 'make menuconfig' to set default Log level to DEBUG, then uncomment:
     //esp_log_level_set("owb", ESP_LOG_DEBUG);
@@ -149,13 +148,22 @@ _Noreturn void app_main()
 //        vTaskDelay(1000 / portTICK_PERIOD_MS);
 //    }
 
-    // Check for parasitic-powered devices that require a strong-pullup
-    bool require_strong_pullup = false;
-    ds18b20_check_for_parasite_power(owb, &require_strong_pullup);
-    printf("Strong pullup (parasitic power) %srequired\n", require_strong_pullup ? "" : "not ");
-    if (require_strong_pullup)
-    {
+    // Check for parasitic-powered devices
+    bool parasitic_power = false;
+    ds18b20_check_for_parasite_power(owb, &parasitic_power);
+    if (parasitic_power) {
+        printf("Parasitic-powered devices detected");
     }
+
+    // In parasitic-power mode, devices cannot indicate when conversions are complete,
+    // so waiting for a temperature conversion must be done by waiting a prescribed duration
+    owb_use_parasitic_power(owb, parasitic_power);
+
+#ifdef CONFIG_ENABLE_STRONG_PULLUP_GPIO
+    // An external pull-up circuit is used to supply extra current to OneWireBus devices
+    // during temperature conversions.
+    owb_use_strong_pullup_gpio(owb, CONFIG_STRONG_PULLUP_GPIO);
+#endif
 
     // Read temperatures more efficiently by starting conversions on all devices at the same time
     int errors_count[MAX_DEVICES] = {0};
@@ -164,21 +172,15 @@ _Noreturn void app_main()
     {
         TickType_t last_wake_time = xTaskGetTickCount();
 
-        while (1) {
+        while (1)
+        {
             last_wake_time = xTaskGetTickCount();
 
             ds18b20_convert_all(owb);
 
             // In this application all devices use the same resolution,
             // so use the first device to determine the delay
-            if (require_strong_pullup) {
-                ets_delay_us(750000);
-                gpio_set_level(5, 0);
-            }
-            else
-            {
-                ds18b20_wait_for_conversion(devices[0]);
-            }
+            ds18b20_wait_for_conversion(devices[0]);
 
             // Read the results immediately after conversion otherwise it may fail
             // (using printf before reading may take too long)

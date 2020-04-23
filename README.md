@@ -6,11 +6,13 @@
 
 ## Introduction
 
-This is an example application for the Maxim Integrated DS18B20 Programmable Resolution 1-Wire Digital Thermometer device.
+This is an example application for the Maxim Integrated DS18B20 Programmable Resolution 1-Wire Digital Thermometer 
+device.
 
 It supports a single or multiple devices on the same 1-Wire bus.
 
-It is written and tested for v3.3 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment, using the xtensa-esp32-elf toolchain (gcc version 5.2.0, crosstool-ng-1.22.0-80-g6c4433a).
+It is written and tested for v3.3 and v4.1-beta1 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment,
+using the xtensa-esp32-elf toolchain (gcc version 5.2.0, crosstool-ng-1.22.0-80-g6c4433a).
 
 Ensure that submodules are cloned:
 
@@ -23,7 +25,8 @@ Build the application with:
     $ idf.py build
     $ idf.py -p (PORT) flash monitor
 
-The program should detect your connected devices and periodically obtain temperature readings from them, displaying them on the console.
+The program should detect your connected devices and periodically obtain temperature readings from them, displaying them
+on the console.
 
 ## Dependencies
 
@@ -34,17 +37,27 @@ This application makes use of the following components (included as submodules):
 
 ## Hardware
 
-To run this example, connect one or more DS18B20 devices to a single GPIO on the ESP32. Use the recommended pull-up resistor of 4.7 KOhms, connected to the 3.3V supply.
+To run this example, connect one or more DS18B20 devices to a single GPIO on the ESP32. Use the recommended pull-up 
+resistor of 4.7 KOhms, connected to the 3.3V supply.
 
 `idf.py menuconfig` can be used to set the 1-Wire GPIO.
 
-If you have several devices and see occasional CRC errors, consider using a 2.2 kOhm pull-up resistor instead. Also consider adding decoupling capacitors between the sensor supply voltage and ground, as close to each sensor as possible.
+If you have several devices and see occasional CRC errors, consider using a 2.2 kOhm pull-up resistor instead. Also 
+consider adding decoupling capacitors between the sensor supply voltage and ground, as close to each sensor as possible.
+
+If you wish to enable a second GPIO to control an external strong pull-up circuit for parasitic power mode, ensure 
+`CONFIG_ENABLE_STRONG_PULLUP=y` and `CONFIG_STRONG_PULLUP_GPIO` is set appropriately.
+ 
+See documentation for [esp32-ds18b20](https://www.github.com/DavidAntliff/esp32-ds18b20-example#parasitic-power-mode)
+for further information about parasitic power mode, including strong pull-up configuration.
+
 
 ## Features
 
 This example provides:
 
- * External power supply mode.
+ * External power supply detection.
+ * Parasitic power supply detection.
  * Static (stack-based) or dynamic (malloc-based) memory model examples.
  * No global variables.
  * Device search.
