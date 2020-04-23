@@ -22,8 +22,6 @@
  * SOFTWARE.
  */
 
-#include <inttypes.h>
-
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_system.h"
@@ -38,7 +36,7 @@
 #define DS18B20_RESOLUTION   (DS18B20_RESOLUTION_12_BIT)
 #define SAMPLE_PERIOD        (1000)   // milliseconds
 
-void app_main()
+_Noreturn void app_main()
 {
     // Override global log level
     esp_log_level_set("*", ESP_LOG_INFO);
@@ -149,6 +147,23 @@ void app_main()
 //        }
 //        vTaskDelay(1000 / portTICK_PERIOD_MS);
 //    }
+
+    // Check for parasitic-powered devices
+    bool parasitic_power = false;
+    ds18b20_check_for_parasite_power(owb, &parasitic_power);
+    if (parasitic_power) {
+        printf("Parasitic-powered devices detected");
+    }
+
+    // In parasitic-power mode, devices cannot indicate when conversions are complete,
+    // so waiting for a temperature conversion must be done by waiting a prescribed duration
+    owb_use_parasitic_power(owb, parasitic_power);
+
+#ifdef CONFIG_ENABLE_STRONG_PULLUP_GPIO
+    // An external pull-up circuit is used to supply extra current to OneWireBus devices
+    // during temperature conversions.
+    owb_use_strong_pullup_gpio(owb, CONFIG_STRONG_PULLUP_GPIO);
+#endif
 
     // Read temperatures more efficiently by starting conversions on all devices at the same time
     int errors_count[MAX_DEVICES] = {0};
