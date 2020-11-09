@@ -174,8 +174,6 @@ _Noreturn void app_main()
 
         while (1)
         {
-            last_wake_time = xTaskGetTickCount();
-
             ds18b20_convert_all(owb);
 
             // In this application all devices use the same resolution,
