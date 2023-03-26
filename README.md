@@ -9,10 +9,16 @@
 This is an example application for the Maxim Integrated DS18B20 Programmable Resolution 1-Wire Digital Thermometer 
 device.
 
+It is intended for the ESP32 (`idf.py` target `esp32`), however with some minor modifications it may work on the other ESP32 devices.
+
 It supports a single or multiple devices on the same 1-Wire bus.
 
-It is written and tested for v3.3 and v4.1-beta1 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment,
-using the xtensa-esp32-elf toolchain (gcc version 5.2.0, crosstool-ng-1.22.0-80-g6c4433a).
+It is tested for v4.4.4 and v5.0.1 of the [ESP-IDF](https://github.com/espressif/esp-idf) environment.
+
+Code for earlier versions of the IDF (v3.3 and v4.1-beta1) may be found on branch [ESP-IDF_v3.3_4.1-beta1](https://github.com/DavidAntliff/esp32-ds18b20-example/tree/ESP-IDF_v3.3_4.1-beta1). 
+This legacy code is no longer supported but you're welcome to use it if you're restricted to older versions of the IDF.
+
+## Clone & Build
 
 Ensure that submodules are cloned:
 
@@ -48,7 +54,7 @@ consider adding decoupling capacitors between the sensor supply voltage and grou
 If you wish to enable a second GPIO to control an external strong pull-up circuit for parasitic power mode, ensure 
 `CONFIG_ENABLE_STRONG_PULLUP=y` and `CONFIG_STRONG_PULLUP_GPIO` is set appropriately.
  
-See documentation for [esp32-ds18b20](https://www.github.com/DavidAntliff/esp32-ds18b20-example#parasitic-power-mode)
+See documentation for [esp32-ds18b20](https://www.github.com/DavidAntliff/esp32-ds18b20#parasitic-power-mode)
 for further information about parasitic power mode, including strong pull-up configuration.
 
 
